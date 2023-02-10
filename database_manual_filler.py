@@ -14,16 +14,18 @@ def nan_to_null(f,
 psycopg2.extensions.register_adapter(float, nan_to_null)
 
 data = pd.read_csv('asistencia_diciembre.csv', sep=',')
-data['entrada_real'].fillna('00:00:00', inplace=True)
-data['salida_real'].fillna('00:00:00', inplace=True)
-data['entrada_turno'].fillna('00:00:00', inplace=True)
-data['salida_turno'].fillna('00:00:00', inplace=True)
 data['colacion'].replace(to_replace='0', value='00:00:00', inplace=True)
-data['fecha'] = pd.to_datetime(data.fecha)
-data.convert_dtypes()
+data['fecha'] = pd.to_datetime(data['fecha'], format="%d-%m-%y")
 
 HOLGURA = time(minutes=5)
 DIA_COMPLETO = 'Día completo'
+CONN = psycopg2.connect(
+    database    = 'asistencias_cic',
+    user        = 'dyatec',
+    password    = 'dyatec2023',
+    host        = 'localhost',
+    port        = '5432'
+)
 
 def hora_to_timedelta(hora):
     if len(hora) == 7:
@@ -48,6 +50,8 @@ def timedelta_to_number(tiempo):
     return tiempo.days * 24 + tiempo.seconds / 3600
 
 def tiempo_asignado(entrada_turno, salida_turno, colacion, noche):
+    if pd.isnull(entrada_turno) or pd.isnull(salida_turno):
+        return time(0)
     tiempo_entrada = hora_to_timedelta(entrada_turno)
     tiempo_salida = hora_to_timedelta(salida_turno)
     tiempo_colacion = hora_to_timedelta(colacion)
@@ -62,7 +66,10 @@ def tiempo_asignado(entrada_turno, salida_turno, colacion, noche):
     return time(seconds=60*round(t_asignado.seconds/60))
 
 def tiempo_entrada_atrasada(entrada_turno, entrada_real, detalle_permiso):
-    if detalle_permiso == DIA_COMPLETO:
+    if (
+        pd.isnull(entrada_turno) or pd.isnull(entrada_real) or
+        detalle_permiso == DIA_COMPLETO
+    ):
         return time(0)
 
     tiempo_entrada_turno = hora_to_timedelta(entrada_turno)
@@ -80,7 +87,10 @@ def tiempo_entrada_atrasada(entrada_turno, entrada_real, detalle_permiso):
         return (tiempo_entrada_real - tiempo_entrada_turno)
 
 def tiempo_salida_anticipada(salida_turno, salida_real, detalle_permiso):
-    if detalle_permiso == DIA_COMPLETO:
+    if (
+        pd.isnull(salida_turno) or pd.isnull(salida_real) or
+        detalle_permiso == DIA_COMPLETO
+    ):
         return time(0)
     tiempo_salida_turno = hora_to_timedelta(salida_turno)
     tiempo_salida_real = hora_to_timedelta(salida_real)
@@ -98,46 +108,44 @@ def tiempo_salida_anticipada(salida_turno, salida_real, detalle_permiso):
 
 def tiempo_efectivo(
         entrada_turno, salida_turno,
-        entrada_real=None, salida_real=None, colacion=None, noche=0,
-        permiso=None, detalle_permiso=None
+        entrada_real=np.nan, salida_real=np.nan, colacion=np.nan, noche=0,
+        permiso=np.nan, detalle_permiso=np.nan
     ):
-    if entrada_real == None or salida_real == None:
-        entrada_real = '00:00:00'
-        salida_real = '00:00:00'
-    if entrada_turno == None or salida_turno == None:
-        return time(0)
-    if colacion == None:
-        colacion = time(0)
-
+    if pd.isnull(colacion):
+        colacion = '00:00:00'
     if (
-        (
-            hora_to_timedelta(entrada_real) <= time(0) and
-            hora_to_timedelta(salida_real) <= time(0)
-        ) or
-        (entrada_turno == None or salida_turno == None) or
+        (pd.isnull(entrada_real) or pd.isnull(salida_real)) or
+        (pd.isnull(entrada_turno) or pd.isnull(salida_turno)) or
         detalle_permiso == DIA_COMPLETO or
         permiso in ['licencia_medica', 'dia_vacaciones', 'falta_injustificada']
     ):
         return time(0)
-    
+
     t_asignado = tiempo_asignado(entrada_turno, salida_turno, colacion, noche)
-    t_atraso = tiempo_entrada_atrasada(
-        entrada_turno, entrada_real, detalle_permiso)
-    t_anticipo = tiempo_salida_anticipada(
-        salida_turno, salida_real, detalle_permiso)
+    t_atraso = tiempo_entrada_atrasada(entrada_turno, entrada_real,
+                                       detalle_permiso)
+    t_anticipo = tiempo_salida_anticipada(salida_turno, salida_real,
+                                          detalle_permiso)
 
     return t_asignado - (t_atraso + t_anticipo)
 
 def tiempo_permiso_con_goce(
-        entrada_turno, salida_turno, colacion=None, noche=0,
-        permiso=None, detalle_permiso=None
+        entrada_turno, salida_turno, salida_real=np.nan,
+        colacion=np.nan, noche=0, permiso=np.nan, detalle_permiso=np.nan
     ):
     if permiso == 'permiso_con_goce':
         if detalle_permiso == DIA_COMPLETO:
             return tiempo_asignado(entrada_turno, salida_turno, colacion, noche)
-        elif type(detalle_permiso) == str and (' hrs' in detalle_permiso):
+        elif pd.notnull(detalle_permiso) and (' hrs' in detalle_permiso):
             hh_mm = detalle_permiso[:detalle_permiso.index(' hrs')].split(':')
             return time(hours=int(hh_mm[0]), minutes=int(hh_mm[1]))
+        elif pd.notnull(salida_turno) and pd.notnull(salida_real):
+            t_salida_turno = hora_to_timedelta(salida_turno)
+            t_salida_real = hora_to_timedelta(salida_real)
+            if t_salida_turno > t_salida_real:
+                return (t_salida_turno - t_salida_real)
+            else:
+                return time(0)
         else:
             return time(0)
     else:
@@ -158,65 +166,92 @@ def execute_values(conn, df, table):
         conn.rollback()
         cursor.close()
         return 1
-    print("the dataframe is inserted")
+    print(f"Dataframe has been inserted correctly into table {table}")
     cursor.close()
 
-conn = psycopg2.connect(
-    database    = 'asistencias_cic',
-    user        = 'dyatec',
-    password    = 'dyatec2023',
-    host        = 'localhost',
-    port        = '5432'
-)
+def clear_table(conn, table):
+    query = f"DELETE FROM {table}"
+    cursor = conn.cursor()
+    try:
+        cursor.execute(query)
+        conn.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print("Error: %s" % error)
+        conn.rollback()
+        cursor.close()
+        return 1
 
+    print(f"Table {table} has been correctly cleared.")
+    cursor.close()
 
-horas_asign_txt     = []
-horas_asign_num     = []
-horas_asist_txt     = []
-horas_asist_num     = []
-entr_tard           = []
-sal_antic           = []
-horas_perm_con_goce = []
+def fill_results(dataframe, table=None, save=False):
+    horas_asign_txt     = []
+    horas_asign_num     = []
+    horas_asist_txt     = []
+    horas_asist_num     = []
+    entr_tard           = []
+    sal_antic           = []
+    horas_perm_con_goce = []
 
-for index, row in data.iterrows():
-    t_asignado = tiempo_asignado(
-        row.entrada_turno, row.salida_turno, row.colacion, row.noche
+    for index, row in dataframe.iterrows():
+        t_asignado = tiempo_asignado(
+            row.entrada_turno, row.salida_turno, row.colacion, row.noche
+        )
+        t_asistido = tiempo_efectivo(
+            row.entrada_turno, row.salida_turno,
+            row.entrada_real, row.salida_real, row.colacion, row.noche,
+            row.permiso, row.detalle_permiso
+        )
+        t_entr_tard = tiempo_entrada_atrasada(
+            row.entrada_turno, row.entrada_real, row.detalle_permiso
+        )
+        t_sal_antic = tiempo_salida_anticipada(
+            row.salida_turno, row.salida_real, row.detalle_permiso
+        )
+        t_perm_con_goce = tiempo_permiso_con_goce(
+            row.entrada_turno, row.salida_turno, row.salida_real,
+            row.colacion, row.noche, row.permiso, row.detalle_permiso
+        )
+        horas_asign_txt.append(timedelta_to_hora(t_asignado))
+        horas_asign_num.append(timedelta_to_number(t_asignado))
+        horas_asist_txt.append(timedelta_to_hora(t_asistido))
+        horas_asist_num.append(timedelta_to_number(t_asistido))
+        entr_tard.append(timedelta_to_number(t_entr_tard))
+        sal_antic.append(timedelta_to_number(t_sal_antic))
+        horas_perm_con_goce.append(timedelta_to_number(t_perm_con_goce))
+
+    dataframe.drop(columns=[
+            'nombre', 'entrada_real', 'salida_real', 
+            'entrada_turno', 'salida_turno', 'colacion', 'noche'
+        ], inplace=True
     )
-    t_asistido = tiempo_efectivo(
-        row.entrada_turno, row.salida_turno,
-        row.entrada_real, row.salida_real, row.colacion, row.noche,
-        row.permiso, row.detalle_permiso
-    )
-    t_entr_tard = tiempo_entrada_atrasada(
-        row.entrada_turno, row.entrada_real, row.detalle_permiso
-    )
-    t_sal_antic = tiempo_salida_anticipada(
-        row.salida_turno, row.salida_real, row.detalle_permiso
-    )
-    t_perm_con_goce = tiempo_permiso_con_goce(
-        row.entrada_turno, row.salida_turno, row.colacion, row.noche,
-        row.permiso, row.detalle_permiso
-    )
-    horas_asign_txt.append(timedelta_to_hora(t_asignado))
-    horas_asign_num.append(timedelta_to_number(t_asignado))
-    horas_asist_txt.append(timedelta_to_hora(t_asistido))
-    horas_asist_num.append(timedelta_to_number(t_asistido))
-    entr_tard.append(timedelta_to_number(t_entr_tard))
-    sal_antic.append(timedelta_to_number(t_sal_antic))
-    horas_perm_con_goce.append(timedelta_to_number(t_perm_con_goce))
+    dataframe['horas_asign_txt']     = horas_asign_txt
+    dataframe['horas_asign_num']     = horas_asign_num
+    dataframe['horas_asist_txt']     = horas_asist_txt
+    dataframe['horas_asist_num']     = horas_asist_num
+    dataframe['entr_tard']           = entr_tard
+    dataframe['sal_antic']           = sal_antic
+    dataframe['horas_perm_con_goce'] = horas_perm_con_goce
 
-data.drop(columns=[
-        'nombre', 'entrada_real', 'salida_real', 
-        'entrada_turno', 'salida_turno', 'colacion', 'noche'
-    ], inplace=True
-)
+    dataframe.sort_values(by=['fecha', 'turno'], inplace=True)
+    if save and table:
+        execute_values(CONN, dataframe, table)
+    else:
+        print(dataframe)
 
-data['horas_asign_txt']     = horas_asign_txt
-data['horas_asign_num']     = horas_asign_num
-data['horas_asist_txt']     = horas_asist_txt
-data['horas_asist_num']     = horas_asist_num
-data['entr_tard']           = entr_tard
-data['sal_antic']           = sal_antic
-data['horas_perm_con_goce'] = horas_perm_con_goce
+to_save = None
+while to_save not in ['y', 'n']:
+    to_save = input('Guardar en bdd? (y/n): ')
 
-execute_values(conn, data, 'ejemplo_resultados')
+if to_save == 'y':
+    clear_table(CONN, 'ejemplo_datos')
+    clear_table(CONN, 'ejemplo_resultados')
+    data.sort_values(by=['fecha', 'entrada_real'], inplace=True)
+    execute_values(CONN, data, 'ejemplo_datos')
+    fill_results(data, 'ejemplo_resultados', save=True)
+else:
+    print(data)
+    fill_results(data, save=False)
+    print('Not saving. Program finished.')
+
+CONN.close()
