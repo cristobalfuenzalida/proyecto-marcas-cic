@@ -305,9 +305,9 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
     input(f"\nTo start filling DataFrame '{table_name}', press any key...")
     for index, row in dataframe.iterrows():
         id_values = get_id_values(row, queries, cursor)
-        if (id_values['persona_id'] == np.nan
-                or id_values['sucursal_id'] == np.nan
-                or id_values['centro_id'] == np.nan):
+        if (pd.isnull(id_values['persona_id'])
+                or pd.isnull(id_values['sucursal_id'])
+                or pd.isnull(id_values['centro_id'])):
             continue
         for key in marks.keys():
             if key in queries.keys():
