@@ -28,20 +28,24 @@ AUX_TABLES = [
 ]
 
 option = None
-while option not in ['y', 'n']:
-    option = input('Guardar en bdd? (y/n): ')
-print_mode = (option == 'y')
+while option not in ['p', 's']:
+    option = input('Print-Only or save into DataBase? (p/s): ')
+print_mode = (option == 'p')
 if print_mode:
     print(DATA)
-
-dff.clear_table('datos_calculados', reset_index=False)
-dff.clear_table('marcas_turnos', reset_index=True)
-for table_name in AUX_TABLES:
-    dff.clear_table(table_name, reset_index=True)
+else:
+    option = None
+    while option not in ['y', 'n']:
+        option = input('Clear database tables first? (y/n): ')
+    if option == 'y':
+        dff.clear_table('datos_calculados', reset_index=False)
+        dff.clear_table('marcas_turnos', reset_index=True)
+        for table_name in AUX_TABLES:
+            dff.clear_table(table_name, reset_index=True)
 
 dff.fill_aux_tables(DATA, AUX_TABLES, print_mode)
 dff.fill_marks_table(DATA, 'marcas_turnos', print_mode)
-dff.fill_results('datos_calculados', print_mode)
+dff.fill_results_table('datos_calculados', print_mode)
 
 print("Closing connection...")
 dff.CONN.close()

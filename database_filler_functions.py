@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta as time
 from datetime import time as timeType
-from sys import exit
+import sys
 
 HOLGURA = time(minutes=5)
 DIA_COMPLETO = 'Día completo'
@@ -47,6 +47,9 @@ def hora_to_timedelta(hora):
         return time(0)
 
 def timedelta_to_hora(tiempo):
+    if type(tiempo) is not time:
+        return '00:00:00'
+
     hours = tiempo.seconds // 3600
     minutes = (tiempo.seconds % 3600) // 60
     seconds = tiempo.seconds % 60
@@ -58,7 +61,10 @@ def timedelta_to_hora(tiempo):
     return f"{hh}:{mm}:{ss}"
 
 def timedelta_to_number(tiempo):
-    return (tiempo.days * 24 + tiempo.seconds / 3600)
+    if type(tiempo) is time:
+        return (tiempo.days * 24 + tiempo.seconds / 3600)
+    else:
+        return float(0)
 
 def tiempo_asignado(entrada_turno, salida_turno, colacion, noche):
     if pd.isnull(entrada_turno) or pd.isnull(salida_turno):
@@ -150,8 +156,8 @@ def tiempo_permiso_con_goce(
         t_salida_real = hora_to_timedelta(salida_real)
         if t_salida_turno > t_salida_real:
             return (t_salida_turno - t_salida_real)
-    else:
-        return time(0)
+
+    return time(0)
 
 def insert_dataframe(dataframe, table_name=None):
     if not table_name:
@@ -172,6 +178,7 @@ def insert_dataframe(dataframe, table_name=None):
         return 1
     print(f"-> Dataframe has been inserted correctly into table {table_name}")
     cursor.close()
+    return 0
 
 def clear_table(table_name, reset_index=True):
     clear_query = f"DELETE FROM {table_name}"
@@ -189,7 +196,7 @@ def clear_table(table_name, reset_index=True):
 
     if not reset_index:
         cursor.close()
-        return
+        return 0
     try:
         cursor.execute(reset_index_query)
         CONN.commit()
@@ -200,10 +207,11 @@ def clear_table(table_name, reset_index=True):
         return 1
     print(f"Primary index of {table_name} has been correctly reset to 1.")
     cursor.close()
+    return 0
 
 def fill_aux_tables(dataframe, table_names=None, print_mode=True):
     if table_names == None or table_names == []:
-        return
+        return 1
     tables = {key: None for key in table_names}
 
     if 'personas' in tables:
@@ -253,7 +261,8 @@ def fill_aux_tables(dataframe, table_names=None, print_mode=True):
             insert_dataframe(tables[key], key)
         else:
             print(QUIT_MESSAGE)
-            exit(0)
+            sys.exit(0)
+    return 0
 
 def fill_marks_table(dataframe, table_name=None, print_mode=True):
     if not table_name:
@@ -293,10 +302,12 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
         'detalle_permiso'   : []
     }
 
-    input(f"\nTo start filling database '{table_name}', press any key...")
+    input(f"\nTo start filling DataFrame '{table_name}', press any key...")
     for index, row in dataframe.iterrows():
         id_values = get_id_values(row, queries, cursor)
-        if 0 in id_values.values():
+        if (id_values['persona_id'] == np.nan
+                or id_values['sucursal_id'] == np.nan
+                or id_values['centro_id'] == np.nan):
             continue
         for key in marks.keys():
             if key in queries.keys():
@@ -317,8 +328,9 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
         insert_dataframe(marks_df, table_name)
     else:
         print(QUIT_MESSAGE)
-        exit(0)
+        sys.exit(0)
     cursor.close()
+    return 0
 
 def get_id_values(row, queries, cursor):
     id_values = {
@@ -328,7 +340,7 @@ def get_id_values(row, queries, cursor):
         'turno_id'      : 0,
         'permiso_id'    : 0
     }
-    for key in queries.keys():
+    for key in id_values.keys():
         try:
             cursor.execute(queries[key]['prompt'] % row[queries[key]['field']])
             response = cursor.fetchone()
@@ -340,11 +352,12 @@ def get_id_values(row, queries, cursor):
             print(f"Error: {error}")
             CONN.rollback()
             return id_values
+
     return id_values
 
 def fill_results_table(table_name=None, print_mode=True):
 
-    input(f"\nStart filling DataFrame '{table_name}'?...")
+    input(f"\nTo start filling DataFrame '{table_name}', press any key...")
 
     dataframe = get_marks_as_dataframe()
 
@@ -392,10 +405,10 @@ def fill_results_table(table_name=None, print_mode=True):
     while option not in ['y', 'n']:
         option = input(f"\nInsert DataFrame into table '{table_name}' (y/n)?: ")
     if option == 'y':
-        insert_dataframe(daily_results_df, table_name)
+        return insert_dataframe(daily_results_df, table_name)
     else:
         print(QUIT_MESSAGE)
-        exit(0)
+        sys.exit(0)
 
 def get_marks_as_dataframe():
     mark_id_query = ("""
