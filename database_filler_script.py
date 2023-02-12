@@ -1,0 +1,48 @@
+import database_filler_functions as dff
+import pandas as pd
+
+DATA = pd.read_csv('asistencias_enero_2023.csv', sep=',')[[
+        'Rut', 'Nombre', 'Sucursal', 'Centro de costo', 'Fecha',
+        'Entrada real', 'Salida real', 'Entrada turno', 'Salida turno',
+        'Turno', 'bono_noche', 'Permiso', 'Detalle permisos'
+    ]].rename(columns={
+        'Rut'               : 'rut',
+        'Nombre'            : 'nombre',
+        'Sucursal'          : 'sucursal',
+        'Centro de costo'   : 'centro',
+        'Fecha'             : 'fecha',
+        'Entrada real'      : 'entrada_real',
+        'Salida real'       : 'salida_real',
+        'Entrada turno'     : 'entrada_turno',
+        'Salida turno'      : 'salida_turno',
+        'Turno'             : 'turno',
+        'bono_noche'        : 'noche',
+        'Permiso'           : 'permiso',
+        'Detalle permisos'  : 'detalle_permiso'
+    }).assign(colacion='00:45:00')
+
+DATA.sort_values(by=['fecha', 'entrada_real'], inplace=True)
+
+AUX_TABLES = [
+    'personas', 'sucursales', 'centros_de_costo', 'turnos', 'permisos'
+]
+
+option = None
+while option not in ['y', 'n']:
+    option = input('Guardar en bdd? (y/n): ')
+print_mode = (option == 'y')
+if print_mode:
+    print(DATA)
+
+dff.clear_table('datos_calculados', reset_index=False)
+dff.clear_table('marcas_turnos', reset_index=True)
+for table_name in AUX_TABLES:
+    dff.clear_table(table_name, reset_index=True)
+
+dff.fill_aux_tables(DATA, AUX_TABLES, print_mode)
+dff.fill_marks_table(DATA, 'marcas_turnos', print_mode)
+dff.fill_results('datos_calculados', print_mode)
+
+print("Closing connection...")
+dff.CONN.close()
+print("Program finished successfully")
