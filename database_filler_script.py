@@ -46,7 +46,7 @@ else:
 
 dff.fill_aux_tables(DATA, AUX_TABLES, print_mode)
 dff.fill_marks_table(DATA, 'marcas_turnos', print_mode)
-dff.fill_results_table('datos_calculados', print_mode)
+dff.fill_results_table(DATA, 'datos_calculados', print_mode)
 
 print("Closing connection...")
 dff.CONN.close()

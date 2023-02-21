@@ -87,7 +87,7 @@ rspr_btn.click()
 # Unmark unnecessary checkboxes
 
 for (i, j) in [(3, 1), (3, 2), (5, 1), (5, 2), (5, 4), (5, 5), (6, 2)]:
-    sleep(1)
+    sleep(0.4)
     box_xpath = ('/html/body/section[2]/section/div[2]/div[1]/div/div/div[2]'
                 + f'/form/div[1]/div[{i}]/div[{j}]/label/input')
     checkbox = wait.until(EC.presence_of_element_located((By.XPATH, box_xpath)))
@@ -99,7 +99,7 @@ date_xpath = ('/html/body/section[2]/section/div[2]'
               '/div[1]/div/div/div[2]/form/div[2]/div[1]/div/input')
 
 today = date.today()
-delta = timedelta(days=60)
+delta = timedelta(days=15)
 
 DATE_RANGE = f"{today - delta} - {today}"
 
@@ -119,9 +119,3 @@ rs_select_xpath = ('/html/body/div[21]/ul/li[2]')
 razon_social = wait.until(
     EC.presence_of_element_located((By.XPATH, rs_select_xpath)))
 razon_social.click()
-
-# Select download Excel button (click later)
-down_xpath = ('/html/body/section[2]/section'
-              '/div[2]/div[1]/div/div/div[3]/button[3]')
-
-down_btn = wait.until(EC.presence_of_element_located((By.XPATH, down_xpath)))

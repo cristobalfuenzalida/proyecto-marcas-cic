@@ -11,7 +11,9 @@ DIA_COMPLETO = 'Día completo'
 QUIT_MESSAGE = "DataFrame was not inserted. Finishing program..."
 PERMISOS_DIARIOS = [
     'licencia_medica',
+    'licencia_maternal',
     'dia_vacaciones',
+    'dia_administrativo',
     'falta_injustificada'
 ]
 
@@ -38,7 +40,9 @@ def hora_to_timedelta(hora):
             hours=hora.hour, minutes=hora.minute, seconds=hora.second
         )
     elif type(hora) is str:
-        if len(hora) == 7:
+        if hora == '':
+            return time(0)
+        elif len(hora) == 7:
             hora = '0' + hora
         return time(
             hours=int(hora[0:2]), minutes=int(hora[3:5]), seconds=int(hora[6:8])
@@ -124,8 +128,6 @@ def tiempo_salida_anticipada(salida_turno, salida_real, detalle_permiso):
 def tiempo_efectivo(
         entrada_turno, salida_turno, entrada_real=np.nan, salida_real=np.nan,
         colacion=np.nan, noche=0, permiso=np.nan, detalle_permiso=np.nan):
-    if pd.isnull(colacion):
-        colacion = '00:00:00'
     if ((pd.isnull(entrada_real) or pd.isnull(salida_real))
             or (pd.isnull(entrada_turno) or pd.isnull(salida_turno))
             or detalle_permiso == DIA_COMPLETO
@@ -143,7 +145,7 @@ def tiempo_efectivo(
 def tiempo_permiso_con_goce(
         entrada_turno, salida_turno, salida_real=np.nan,
         colacion=np.nan, noche=0, permiso=np.nan, detalle_permiso=np.nan):
-    if permiso != 'permiso_con_goce':
+    if permiso not in ['permiso_con_goce', 'dia_administrativo']:
         return time(0)
     elif detalle_permiso == DIA_COMPLETO:
         return tiempo_asignado(
@@ -267,6 +269,23 @@ def fill_aux_tables(dataframe, table_names=None, print_mode=True):
 def fill_marks_table(dataframe, table_name=None, print_mode=True):
     if not table_name:
         return 1
+    
+    if print_mode:
+        input(f"\nDataFrame '{table_name}' (Python):")
+        data = dataframe[[
+            'rut',
+            'entrada_real',
+            'salida_real',
+            'entrada_turno',
+            'salida_turno',
+            'colacion',
+            'noche',
+            'permiso',
+            'detalle_permiso'
+        ]]
+        print(data)
+        return 0
+
     queries = {
         'persona_id'    : {
             'prompt' : "SELECT id FROM personas WHERE rut='%s'",
@@ -316,11 +335,6 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
                 marks[key].append(row[key])
     marks_df = pd.DataFrame(marks)
 
-    if print_mode:
-        input(f"\nDataFrame '{table_name}' (Python):")
-        print(marks_df)
-        return 0
-
     option = None
     while option not in ['y', 'n']:
         option = input(f"\nInsert DataFrame into table '{table_name}' (y/n)?: ")
@@ -355,11 +369,24 @@ def get_id_values(row, queries, cursor):
 
     return id_values
 
-def fill_results_table(table_name=None, print_mode=True):
+def fill_results_table(dataframe, table_name=None, print_mode=True):
 
     input(f"\nTo start filling DataFrame '{table_name}', press any key...")
 
-    dataframe = get_marks_as_dataframe()
+    if print_mode:
+        data = dataframe[[
+            'rut',
+            'entrada_real',
+            'salida_real',
+            'entrada_turno',
+            'salida_turno',
+            'colacion',
+            'noche',
+            'permiso',
+            'detalle_permiso'
+        ]]
+    else:
+        data = get_marks_as_dataframe()
 
     daily_results = {
         'marca_turno_id'    : [],
@@ -370,7 +397,7 @@ def fill_results_table(table_name=None, print_mode=True):
         't_permiso_cg'      : []
     }
 
-    for index, row in dataframe.iterrows():
+    for index, row in data.iterrows():
         tiempos = {
             't_asignado'    : tiempo_asignado(
                 row.entrada_turno, row.salida_turno, row.colacion, row.noche),
@@ -386,7 +413,10 @@ def fill_results_table(table_name=None, print_mode=True):
                 row.entrada_turno, row.salida_turno, row.salida_real,
                 row.colacion, row.noche, row.permiso, row.detalle_permiso),
         }
-        daily_results['marca_turno_id'].append(row['marca_turno_id'])
+        if print_mode:
+            daily_results['marca_turno_id'].append(row['rut'])
+        else:
+            daily_results['marca_turno_id'].append(row['marca_turno_id'])
 
         for key in tiempos.keys():
             daily_results[key].append(timedelta_to_number(tiempos[key]))
@@ -394,8 +424,6 @@ def fill_results_table(table_name=None, print_mode=True):
     daily_results_df = pd.DataFrame(daily_results)
 
     if print_mode:
-        input('\nTabla de marcas (PostgreSQL):')
-        print(dataframe)
         input('\nTabla de resultados:')
         print(daily_results_df)
         print("\nNot saving marks into database...")
