@@ -1,10 +1,11 @@
+import scraper_bot
 import database_filler_functions as dff
 import pandas as pd
 
-DATA = pd.read_csv('asistencias_enero_2023.csv', sep=',')[[
+DATA = pd.read_excel('ReporteAvanzado.xlsx')[[
         'Rut', 'Nombre', 'Sucursal', 'Centro de costo', 'Fecha',
         'Entrada real', 'Salida real', 'Entrada turno', 'Salida turno',
-        'Turno', 'bono_noche', 'Permiso', 'Detalle permisos'
+        'Turno', 'Noche', 'Permiso', 'Detalle permisos'
     ]].rename(columns={
         'Rut'               : 'rut',
         'Nombre'            : 'nombre',
@@ -16,7 +17,7 @@ DATA = pd.read_csv('asistencias_enero_2023.csv', sep=',')[[
         'Entrada turno'     : 'entrada_turno',
         'Salida turno'      : 'salida_turno',
         'Turno'             : 'turno',
-        'bono_noche'        : 'noche',
+        'Noche'             : 'noche',
         'Permiso'           : 'permiso',
         'Detalle permisos'  : 'detalle_permiso'
     }).assign(colacion='00:45:00')
