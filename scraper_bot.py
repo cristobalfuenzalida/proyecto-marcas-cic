@@ -23,12 +23,19 @@ def timeout_input(timeout, prompt="", timeout_value=None):
         sys.stdout.flush()
         return timeout_value
 
+def delete_previous_file(filename):
+    if os.path.exists(filename):
+        print(f'Removing file {filename}...\n')
+        os.remove(filename)
+    else:
+        print("The file does not exist")
+
 options = Options()
 download_directory = (os.getcwd())
 prefs = {'download.default_directory' : download_directory}
 options.add_experimental_option("prefs", prefs)
-# options.add_argument('--headless')
-# options.add_argument('--no-sandbox')
+options.add_argument('--headless')
+options.add_argument('--no-sandbox')
 
 driver = webdriver.Chrome(service=Service('/usr/local/bin/chromedriver'),
                           options=options)
@@ -39,19 +46,21 @@ URL = 'https://talana.com/es/remuneraciones/login-vue?next=/es/asistencia/#/'
 
 driver.get(URL)
 
+print("Logging in...")
+
 wait = WebDriverWait(driver=driver, timeout=10)
 driver.implicitly_wait(15)
 
 # Fill username field
 user_xpath = ('/html/body/div/div/main/div/div/div[1]'
-            '/div/div/div[2]/form/div[1]/div[1]/input')
+              '/div/div/div[2]/form/div[1]/div[1]/input')
 
 user_field = wait.until(EC.presence_of_element_located((By.XPATH, user_xpath)))
 user_field.send_keys(USERNAME)
 
 # Fill password field
 pass_xpath = ('/html/body/div/div/main/div/div/div[1]'
-            '/div/div/div[2]/form/div[3]/div[1]/div[1]/input')
+              '/div/div/div[2]/form/div[3]/div[1]/div[1]/input')
 
 pass_field = wait.until(EC.presence_of_element_located((By.XPATH, pass_xpath)))
 pass_field.send_keys(PASSWORD)
@@ -67,9 +76,11 @@ sleep(5)
 print(f'Logged into Talana as user {USERNAME}\n')
 
 # Go into section 'Reportes' from dashboard
+print("Pointing driver to 'Reportes'...\n")
 driver.get('https://talana.com/es/asistencia/reportes/')
 
 # Go into 'Avanzados' subsection of 'Reportes'
+print("Pointing driver to 'Avanzados'...\n")
 avnz_xpath = ('/html/body/section[2]/section/div[2]'
               '/div[9]/div/div/div/div/div/ul/li[3]/a')
 
@@ -77,6 +88,7 @@ avnz_btn = wait.until(EC.presence_of_element_located((By.XPATH, avnz_xpath)))
 avnz_btn.click()
 
 # Open options to download 'Reporte semanal por rut'
+print("Opening panel 'Reporte semanal'...\n")
 rspr_xpath = ('/html/body/section[2]/section/div[2]'
               '/div[9]/div/div/div/div/div/div/div[3]'
               '/div[2]/table/tbody/tr[2]/td/span')
@@ -85,7 +97,7 @@ rspr_btn = wait.until(EC.presence_of_element_located((By.XPATH, rspr_xpath)))
 rspr_btn.click()
 
 # Unmark unnecessary checkboxes
-
+print("Unmarking unnecesary option checkboxes...\n")
 for (i, j) in [(3, 1), (3, 2), (5, 1), (5, 2), (5, 4), (5, 5), (6, 2)]:
     sleep(0.4)
     box_xpath = ('/html/body/section[2]/section/div[2]/div[1]/div/div/div[2]'
@@ -95,11 +107,12 @@ for (i, j) in [(3, 1), (3, 2), (5, 1), (5, 2), (5, 4), (5, 5), (6, 2)]:
 
 
 # Replace default date range input with custom range
+print("Setting date range for data...\n")
 date_xpath = ('/html/body/section[2]/section/div[2]'
               '/div[1]/div/div/div[2]/form/div[2]/div[1]/div/input')
 
 today = date.today()
-delta = timedelta(days=15)
+delta = timedelta(days=30)
 
 DATE_RANGE = f"{today - delta} - {today}"
 
@@ -110,15 +123,24 @@ date_field.send_keys(Keys.ENTER)
 date_field.send_keys(Keys.TAB)
 
 #! Filter by 'Razón Social'
-# rs_list_xpath = ('/html/body/section[2]/section/div[2]'
-#                  '/div[1]/div/div/div[2]/form/div[3]/div[1]/div/a/span[2]')
-# rs_coll = wait.until(EC.presence_of_element_located((By.XPATH, rs_list_xpath)))
-# rs_coll.click()
+print("Filtering data by 'razón social'...\n")
+rs_list_xpath = ('/html/body/section[2]/section/div[2]'
+                 '/div[1]/div/div/div[2]/form/div[3]/div[1]/div/a/span[2]')
 
-# rs_select_xpath = ('/html/body/div[21]/ul/li[2]')
-# razon_social = wait.until(
-#     EC.presence_of_element_located((By.XPATH, rs_select_xpath)))
-# razon_social.click()
+rs_coll = wait.until(EC.presence_of_element_located((By.XPATH, rs_list_xpath)))
+rs_coll.click()
+
+rs_options_xpaths = {
+    'TODOS'                 : '/html/body/div[21]/ul/li[1]',
+    'CIC RETAIL SPA'        : '/html/body/div[21]/ul/li[2]',
+    'COMPAÑIAS CIC S.A.'    : '/html/body/div[21]/ul/li[3]',
+    'Externos'              : '/html/body/div[21]/ul/li[4]'
+}
+
+razon_social = wait.until(EC.presence_of_element_located(
+    (By.XPATH, rs_options_xpaths['COMPAÑIAS CIC S.A.'])
+))
+razon_social.click()
 
 # Select download Excel button (click later)
 down_xpath = ('/html/body/section[2]/section'
@@ -132,13 +154,9 @@ sleep(5)
 
 filename = 'ReporteAvanzado.xlsx'
 
-if os.path.exists(filename):
-    print(f'Removing file {filename}...\n')
-    os.remove(filename)
-else:
-    print("The file does not exist")
-
 down_btn.click()
+
+delete_previous_file(filename)
 
 start = time()
 
@@ -155,16 +173,15 @@ while True:
     if os.path.isfile(filename):
         print('File download complete!')
         break
-    else:
-        print(f'File download in progress   : {percent}%')
-        user_input = timeout_input(5, "To cancel download, press X : ", '')
-        print()
-        if user_input.upper() == 'X':
-            print('Download canceled...')
-            print('Program ended early')
-            driver.quit()
-            sys.exit(0)
-        sleep(5)
+
+    print(f'File download in progress   : {percent}%')
+    user_input = timeout_input(5, "To cancel download, press X : ", '')
+    print()
+    if user_input.upper() == 'X':
+        print('Download canceled...')
+        print('Program ended early')
+        driver.quit()
+        sys.exit(0)
 
 now = int(time() - start)
 hour = now // 3600

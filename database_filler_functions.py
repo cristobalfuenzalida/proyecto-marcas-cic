@@ -256,7 +256,8 @@ def fill_aux_tables(dataframe, table_names=None, print_mode=True):
         return 0
 
     for key in tables.keys():
-        option = None
+        #! Change to option = None to allow user choice
+        option = 'y'
         while option not in ['y', 'n']:
             option = input(f"\nInsert DataFrame into table '{key}' (y/n)?: ")
         if option == 'y':
@@ -272,17 +273,7 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
     
     if print_mode:
         input(f"\nDataFrame '{table_name}' (Python):")
-        data = dataframe[[
-            'rut',
-            'entrada_real',
-            'salida_real',
-            'entrada_turno',
-            'salida_turno',
-            'colacion',
-            'noche',
-            'permiso',
-            'detalle_permiso'
-        ]]
+        data = get_marks_from_dataframe(dataframe)
         print(data)
         return 0
 
@@ -321,7 +312,6 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
         'detalle_permiso'   : []
     }
 
-    input(f"\nTo start filling DataFrame '{table_name}', press any key...")
     for index, row in dataframe.iterrows():
         id_values = get_id_values(row, queries, cursor)
         if (pd.isnull(id_values['persona_id'])
@@ -335,7 +325,8 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
                 marks[key].append(row[key])
     marks_df = pd.DataFrame(marks)
 
-    option = None
+    #! Change to option = None to allow user choice
+    option = 'y'
     while option not in ['y', 'n']:
         option = input(f"\nInsert DataFrame into table '{table_name}' (y/n)?: ")
     if option == 'y':
@@ -370,23 +361,10 @@ def get_id_values(row, queries, cursor):
     return id_values
 
 def fill_results_table(dataframe, table_name=None, print_mode=True):
-
-    input(f"\nTo start filling DataFrame '{table_name}', press any key...")
-
     if print_mode:
-        data = dataframe[[
-            'rut',
-            'entrada_real',
-            'salida_real',
-            'entrada_turno',
-            'salida_turno',
-            'colacion',
-            'noche',
-            'permiso',
-            'detalle_permiso'
-        ]]
+        data = get_marks_from_dataframe(dataframe)
     else:
-        data = get_marks_as_dataframe()
+        data = get_marks_from_database()
 
     daily_results = {
         'marca_turno_id'    : [],
@@ -429,7 +407,8 @@ def fill_results_table(dataframe, table_name=None, print_mode=True):
         print("\nNot saving marks into database...")
         return 0
     
-    option = None
+    #! Change to option = None to allow user choice
+    option = 'y'
     while option not in ['y', 'n']:
         option = input(f"\nInsert DataFrame into table '{table_name}' (y/n)?: ")
     if option == 'y':
@@ -438,7 +417,7 @@ def fill_results_table(dataframe, table_name=None, print_mode=True):
         print(QUIT_MESSAGE)
         sys.exit(0)
 
-def get_marks_as_dataframe():
+def get_marks_from_database():
     mark_id_query = ("""
         SELECT      mt.id, mt.entrada_real, mt.salida_real,
                     t.entrada_turno, t.salida_turno, t.colacion, t.noche,
@@ -471,3 +450,16 @@ def get_marks_as_dataframe():
     ).fillna(np.nan)
     
     return marks_df
+
+def get_marks_from_dataframe(dataframe):
+    return dataframe[[
+        'rut',
+        'entrada_real',
+        'salida_real',
+        'entrada_turno',
+        'salida_turno',
+        'colacion',
+        'noche',
+        'permiso',
+        'detalle_permiso'
+    ]]

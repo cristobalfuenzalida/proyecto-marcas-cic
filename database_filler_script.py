@@ -1,6 +1,7 @@
 import scraper_bot
 import database_filler_functions as dff
 import pandas as pd
+import numpy as np
 
 DATA = pd.read_excel('ReporteAvanzado.xlsx')[[
         'Rut', 'Nombre', 'Sucursal', 'Centro de costo', 'Fecha',
@@ -22,13 +23,20 @@ DATA = pd.read_excel('ReporteAvanzado.xlsx')[[
         'Detalle permisos'  : 'detalle_permiso'
     }).assign(colacion='00:45:00')
 
+DATA.loc[pd.isnull(DATA['turno']), 'colacion'] = np.nan
+
+DATA.loc[DATA['noche'] == 1, 'noche'] = 0
+
+DATA.loc[DATA['entrada_turno'] > DATA['salida_turno'], 'noche'] = 1
+
 DATA.sort_values(by=['fecha', 'entrada_real'], inplace=True)
 
 AUX_TABLES = [
     'personas', 'sucursales', 'centros_de_costo', 'turnos', 'permisos'
 ]
 
-option = None
+#! Change to option = 's' to make whole process automatic and interrumpted
+option = 's'
 while option not in ['p', 's']:
     option = input('Print-Only or save into DataBase? (p/s): ')
 print_mode = (option == 'p')
