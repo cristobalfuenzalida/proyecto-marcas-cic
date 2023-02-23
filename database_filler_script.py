@@ -73,5 +73,5 @@ dff.CONN.close()
 print("Program finished successfully")
 
 status_file = open('status.txt', 'w')
-status_file.write('It worked!')
+status_file.write('Cron task worked successfully.')
 status_file.close()
