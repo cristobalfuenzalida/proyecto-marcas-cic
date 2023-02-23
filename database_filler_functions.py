@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta as time
 from datetime import time as timeType
+import aux_functions as af
 import sys
 
 HOLGURA = time(minutes=5)
@@ -251,7 +252,7 @@ def fill_aux_tables(dataframe, table_names=None, print_mode=True):
 
     if print_mode:
         for key in tables.keys():
-            input(f"\nDataFrame '{key}':")
+            af.timeout_input(5, f"\nDataFrame '{key}':", None)
             print(tables[key])
         return 0
 
@@ -259,7 +260,8 @@ def fill_aux_tables(dataframe, table_names=None, print_mode=True):
         #! Change to option = None to allow user choice
         option = 'y'
         while option not in ['y', 'n']:
-            option = input(f"\nInsert DataFrame into table '{key}' (y/n)?: ")
+            option = af.timeout_input(
+                10, f"\nInsert DataFrame into table '{key}' (y/n)?: ", 'n')
         if option == 'y':
             insert_dataframe(tables[key], key)
         else:
@@ -272,7 +274,7 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
         return 1
     
     if print_mode:
-        input(f"\nDataFrame '{table_name}' (Python):")
+        af.timeout_input(5, f"\nDataFrame '{table_name}' (Python):", None)
         data = get_marks_from_dataframe(dataframe)
         print(data)
         return 0
@@ -328,7 +330,8 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
     #! Change to option = None to allow user choice
     option = 'y'
     while option not in ['y', 'n']:
-        option = input(f"\nInsert DataFrame into table '{table_name}' (y/n)?: ")
+        option = af.timeout_input(
+            10, f"\nInsert DataFrame into table '{table_name}' (y/n)?: ", 'n')
     if option == 'y':
         insert_dataframe(marks_df, table_name)
     else:
@@ -402,7 +405,7 @@ def fill_results_table(dataframe, table_name=None, print_mode=True):
     daily_results_df = pd.DataFrame(daily_results)
 
     if print_mode:
-        input('\nTabla de resultados:')
+        af.timeout_input(5, '\nTabla de resultados:', None)
         print(daily_results_df)
         print("\nNot saving marks into database...")
         return 0
@@ -410,7 +413,8 @@ def fill_results_table(dataframe, table_name=None, print_mode=True):
     #! Change to option = None to allow user choice
     option = 'y'
     while option not in ['y', 'n']:
-        option = input(f"\nInsert DataFrame into table '{table_name}' (y/n)?: ")
+        option = af.timeout_input(
+            10, f"\nInsert DataFrame into table '{table_name}' (y/n)?: ", 'n')
     if option == 'y':
         return insert_dataframe(daily_results_df, table_name)
     else:

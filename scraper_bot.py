@@ -8,20 +8,9 @@ from selenium.webdriver.common.by import By
 from datetime import date, timedelta
 from datetime import time as dtime
 from time import sleep, time
-import select
+from aux_functions import timeout_input
 import sys
 import os
-
-def timeout_input(timeout, prompt="", timeout_value=None):
-    sys.stdout.write(prompt)
-    sys.stdout.flush()
-    ready, _, _ = select.select([sys.stdin], [], [], timeout)
-    if ready:
-        return sys.stdin.readline().rstrip('\n')
-    else:
-        sys.stdout.write('\n')
-        sys.stdout.flush()
-        return timeout_value
 
 def delete_previous_file(filename):
     if os.path.exists(filename):
