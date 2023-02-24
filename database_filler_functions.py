@@ -1,16 +1,23 @@
+import google_sheets_api as gsa
 import psycopg2
 import psycopg2.extras as extras
 import pandas as pd
 import numpy as np
+import requests
+import json
 from datetime import timedelta as time
 from datetime import time as timeType
 from datetime import date
-import aux_functions as af
+from aux_functions import timeout_input
 import sys
 
 HOLGURA = time(minutes=5)
 DIA_COMPLETO = 'Día completo'
 QUIT_MESSAGE = "DataFrame was not inserted. Finishing program..."
+DEFAULT_QUERY = "INSERT INTO %s(%s) VALUES %%s"
+UPSERT_QUERY = "INSERT INTO %s(%s) VALUES %%s ON CONFLICT (%s) DO NOTHING"
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SPREADSHEET_ID = '1gR7VbHlI_n8HTc2DpfghRaTtwr5KuNTAhfNx4UeXJ3M'
 PERMISOS_DIARIOS = [
     'licencia_medica',
     'licencia_maternal',
@@ -170,7 +177,7 @@ def insert_dataframe(dataframe, table_name=None):
     columns = ','.join(list(dataframe.columns))
 
     # SQL query to execute
-    insertion_query = "INSERT INTO %s(%s) VALUES %%s" % (table_name, columns)
+    insertion_query = DEFAULT_QUERY % (table_name, columns)
     cursor = CONN.cursor()
     try:
         extras.execute_values(cursor, insertion_query, tuples)
@@ -184,7 +191,7 @@ def insert_dataframe(dataframe, table_name=None):
     cursor.close()
     return 0
 
-def clear_marks(table_name, reset_index=True, fecha_desde=None):
+def clear_marks(table_name, fecha_desde=None):
     if not fecha_desde:
         fecha_desde = str(date.today() - time(days=31))
     clear_query = f"DELETE FROM {table_name} WHERE fecha >= {fecha_desde}"
@@ -204,9 +211,6 @@ def clear_marks(table_name, reset_index=True, fecha_desde=None):
     print(f"\nData from table {table_name} has been correctly cleared "
           + f"for dates >= {fecha_desde}.")
 
-    if not reset_index:
-        cursor.close()
-        return 0
     try:
         cursor.execute(set_index_to_max)
         CONN.commit()
@@ -219,61 +223,145 @@ def clear_marks(table_name, reset_index=True, fecha_desde=None):
     cursor.close()
     return 0
 
-def fill_aux_tables(dataframe, table_names=None, print_mode=True):
-    if table_names == None or table_names == []:
-        return 1
-    tables = {key: None for key in table_names}
-
-    if 'personas' in tables:
-        tables['personas'] = dataframe[['rut', 'nombre']].copy()
-        tables['personas'].drop_duplicates(inplace=True)
-        tables['personas'].reset_index(drop=True, inplace=True)
-        tables['personas'].dropna(inplace=True)
-
-    if 'sucursales' in tables:
-        tables['sucursales'] = pd.DataFrame(
-            {'sucursal': dataframe['sucursal'].unique()}
-        )
-        tables['sucursales'].dropna(inplace=True)
-
-    if 'centros_de_costo' in tables:
-        tables['centros_de_costo'] = pd.DataFrame(
-            {'centro': dataframe['centro'].unique()}
-        )
-        tables['centros_de_costo'].dropna(inplace=True)
-
-    if 'turnos' in tables:
-        tables['turnos'] = dataframe[[
-            'turno', 'entrada_turno', 'salida_turno', 'colacion', 'noche'
-        ]].copy()
-        tables['turnos'].drop_duplicates(inplace=True)
-        tables['turnos'].reset_index(drop=True, inplace=True)
-        tables['turnos'].dropna(inplace=True)
-        tables['turnos']['noche'] = tables['turnos']['noche'].astype(bool)
-
-    if 'permisos' in tables:
-        tables['permisos'] = pd.DataFrame({
-            'tipo': dataframe['permiso'].unique()
-        })
-        tables['permisos'].dropna(inplace=True)
+def update_personas(dataframe, print_mode=True):
+    personas = dataframe[['rut', 'nombre']]
+    personas.drop_duplicates(inplace=True)
+    personas.reset_index(drop=True, inplace=True)
+    columns = 'rut,nombre'
 
     if print_mode:
-        for key in tables.keys():
-            af.timeout_input(5, f"\nDataFrame '{key}':", None)
-            print(tables[key])
+        timeout_input(5, "\nDataFrame 'personas':", None)
+        print(personas)
         return 0
 
-    for key in tables.keys():
-        #! Change to option = None to allow user choice
-        option = 'y'
-        while option not in ['y', 'n']:
-            option = af.timeout_input(
-                10, f"\nInsert DataFrame into table '{key}' (y/n)?: ", 'n')
-        if option == 'y':
-            insert_dataframe(tables[key], key)
-        else:
-            print(QUIT_MESSAGE)
-            sys.exit(0)
+    cursor = CONN.cursor()
+    tuples = [
+        (row.rut, row.nombre) for i, row in personas.iterrows()
+    ]
+
+    insertion_query = UPSERT_QUERY % ('personas', columns, 'rut')
+    try:
+        extras.execute_values(cursor, insertion_query, tuples)
+        CONN.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error: {error}")
+        CONN.rollback()
+        cursor.close()
+        return 1
+
+    print(f"-> Table 'personas' has been updated with new values")
+    cursor.close()
+    return 0
+
+def update_sucursales(dataframe, print_mode=True):
+    sucursales = dataframe.assign(id=np.nan)[['id', 'sucursal']]
+    sucursales.drop_duplicates(inplace=True)
+    sucursales.reset_index(drop=True, inplace=True)
+    sucursales.dropna(inplace=True)
+    columns = 'id,sucursal'
+
+    if print_mode:
+        timeout_input(5, "\nDataFrame 'sucursales':", None)
+        print(sucursales)
+        return 0
+
+    cursor = CONN.cursor()
+    tuples = []
+
+    for index, row in sucursales.iterrows():
+        response_api = requests.get(
+            url=f'https://talana.com/es/api/sucursal/?nombre={row.sucursal}',
+            auth=('integracion-empleados-asistencia-Bi@cic.cl',
+                  'PresenteHilarante2969#')
+        )
+        sucursal_api = json.loads(response_api.text)
+        sucursales.loc[index, 'id'] = int(sucursal_api[0]['id'])
+        tuples.append((row.id, row.sucursal))
+    
+    insertion_query = UPSERT_QUERY % ('sucursales', columns, 'sucursal')
+    try:
+        extras.execute_values(cursor, insertion_query, tuples)
+        CONN.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error: {error}")
+        CONN.rollback()
+        cursor.close()
+        return 1
+
+    print(f"-> Table 'sucursales' has been updated with new values")
+    cursor.close()
+    return 0
+
+def update_centros_de_costo(dataframe, print_mode=True):
+    centros_de_costo = dataframe['centro'].assign(id=np.nan)[['id', 'centro']]
+    centros_de_costo.drop_duplicates(inplace=True)
+    centros_de_costo.reset_index(drop=True, inplace=True)
+    centros_de_costo.dropna(inplace=True)
+    tuples = [
+        (row.centro,) for index, row in centros_de_costo.iterrows()
+    ]
+    columns = 'centro'
+
+    if print_mode:
+        timeout_input(5, "\nDataFrame 'centros_de_costo':", None)
+        print(centros_de_costo)
+        return 0
+
+    cursor = CONN.cursor()
+    insertion_query = UPSERT_QUERY % ('centros_de_costo', columns, 'centro')
+    try:
+        extras.execute_values(cursor, insertion_query, tuples)
+        CONN.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error: {error}")
+        CONN.rollback()
+        cursor.close()
+        return 1
+
+    print(f"-> Table 'centros_de_costo' has been updated with new values")
+    cursor.close()
+    return 0
+
+#TODO enlazar a Google Sheets
+def update_turnos(print_mode=True):
+    data_to_pull = 'turnos!A1:E200'
+    data = gsa.pull_sheet_data(SCOPES, SPREADSHEET_ID, data_to_pull)
+    turnos = pd.DataFrame(data[1:], columns=data[0]).rename(columns={
+        'Id'                : 'id',
+        'Turno'             : 'turno',
+        'Entrada turno'     : 'entrada_turno',
+        'Salida turno'      : 'salida_turno',
+        'Colacion'          : 'colacion'
+    })
+    turnos.drop_duplicates(inplace=True)
+    turnos.reset_index(drop=True, inplace=True)
+    turnos.dropna(inplace=True)
+    columns = 'id,turno,entrada_turno,salida_turno,colacion'
+    
+    if print_mode:
+        timeout_input(5, "\nDataFrame 'turnos':", None)
+        print(turnos)
+        return 0
+    
+    cursor = CONN.cursor()
+    tuples = []
+
+    for index, row in turnos.iterrows():
+        tuples.append((row.id, row.turno, row.entrada_turno,
+                       row.salida_turno, row.colacion))
+    
+    insertion_query = UPSERT_QUERY % ('turnos', columns, 'turno')
+    try:
+        extras.execute_values(cursor, insertion_query, tuples)
+        CONN.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error: {error}")
+        CONN.rollback()
+        cursor.close()
+        return 1
+
+    print(f"-> Table 'turnos' has been updated with new values")
+    cursor.close()
     return 0
 
 def fill_marks_table(dataframe, table_name=None, print_mode=True):
@@ -281,7 +369,7 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
         return 1
     
     if print_mode:
-        af.timeout_input(5, f"\nDataFrame '{table_name}' (Python):", None)
+        timeout_input(5, f"\nDataFrame '{table_name}' (Python):", None)
         data = get_marks_from_dataframe(dataframe)
         print(data)
         return 0
@@ -337,7 +425,7 @@ def fill_marks_table(dataframe, table_name=None, print_mode=True):
     #! Change to option = None to allow user choice
     option = 'y'
     while option not in ['y', 'n']:
-        option = af.timeout_input(
+        option = timeout_input(
             10, f"\nInsert DataFrame into table '{table_name}' (y/n)?: ", 'n')
     if option == 'y':
         insert_dataframe(marks_df, table_name)
@@ -412,7 +500,7 @@ def fill_results_table(dataframe, table_name=None, print_mode=True):
     daily_results_df = pd.DataFrame(daily_results)
 
     if print_mode:
-        af.timeout_input(5, '\nTabla de resultados:', None)
+        timeout_input(5, '\nTabla de resultados:', None)
         print(daily_results_df)
         print("\nNot saving marks into database...")
         return 0
@@ -420,7 +508,7 @@ def fill_results_table(dataframe, table_name=None, print_mode=True):
     #! Change to option = None to allow user choice
     option = 'y'
     while option not in ['y', 'n']:
-        option = af.timeout_input(
+        option = timeout_input(
             10, f"\nInsert DataFrame into table '{table_name}' (y/n)?: ", 'n')
     if option == 'y':
         return insert_dataframe(daily_results_df, table_name)

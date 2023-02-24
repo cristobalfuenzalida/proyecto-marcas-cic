@@ -1,106 +1,50 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-from datetime import date, timedelta
-from datetime import time as dtime
-from time import sleep, time
-from aux_functions import timeout_input
+import database_filler_functions as dff
+import aux_functions as af
+from datetime import timedelta as time
+from datetime import date
+import pandas as pd
+import numpy as np
 import sys
 import os
 
-DEFAULT_FILE_NAME = 'ReporteAvanzado.xlsx'
-CURRENT_DIRECTORY = os.getcwd()
-USERNAME = '14228822-2'
-PASSWORD = 'Andrea040188.'
-DAYS = 1
-DATE_RANGE = f"{date.today() - timedelta(days=DAYS)} - {date.today()}"
-RAZONES_SOCIALES = ['CIC_RETAIL_SPA', 'COMPAÑIAS_CIC_SA']
+dataframes = {}
+RAZONES_SOCIALES = ['CIC RETAIL SPA', 'COMPAÑIAS CIC S.A.']
 
-def replace_previous_file(filename):
-    if not os.path.exists(DEFAULT_FILE_NAME):
-        return
-    if os.path.exists(filename):
-        print(f'Removing file {filename}...\n')
-        os.remove(filename)
-    else:
-        print("There is no previous file. Renaming new file in its place...")
+for razon_social in RAZONES_SOCIALES:
+    rs_file_format = razon_social.replace(' ', '_').replace('.', '_')
+    filename = f"Reporte_{rs_file_format}.xlsx"
 
-    os.rename(f"{CURRENT_DIRECTORY}/{DEFAULT_FILE_NAME}",
-              f"{CURRENT_DIRECTORY}/{filename}")
+    if not os.path.exists(filename):
+        print(f"File {filename} not found...")
+        print('The file you are trying to use as data source does not exist')
+        print('Program finished unsuccessfully')
+        sys.exit(1)
 
-XPATHS = {
-    'username'          : ('/html/body/div/div/main/div/div/div[1]'
-                           '/div/div/div[2]/form/div[1]/div[1]/input'),
-    'password'          : ('/html/body/div/div/main/div/div/div[1]'
-                           '/div/div/div[2]/form/div[3]/div[1]/div[1]/input'),
-    'login'             : ('/html/body/div/div/main/div/div/div[1]'
-                           '/div/div/div[2]/form/div[3]/div[2]/button[2]'),
-    'avanzados'         : ('/html/body/section[2]/section/div[2]'
-                           '/div[9]/div/div/div/div/div/ul/li[3]/a'),
-    'reporte_semanal'   : ('/html/body/section[2]/section/div[2]'
-                           '/div[9]/div/div/div/div/div/div/div[3]'
-                           '/div[2]/table/tbody/tr[2]/td/span'),
-    'date_range_field'  : ('/html/body/section[2]/section/div[2]/div[1]'
-                           '/div/div/div[2]/form/div[2]/div[1]/div/input'),
-    'razon_social_list' : ('/html/body/section[2]/section/div[2]/div[1]'
-                           '/div/div/div[2]/form/div[3]/div[1]/div/a/span[2]'),
-    RAZONES_SOCIALES[0] : '/html/body/div[21]/ul/li[2]',
-    RAZONES_SOCIALES[1] : '/html/body/div[21]/ul/li[3]',
-    'download_button'   : ('/html/body/section[2]/section/div[2]/div[1]'
-                           '/div/div/div[3]/button[3]'),
-    'down_percentage'   : ('/html/body/section[2]/section/div[2]/div[10]'
-                           '/div/div/div[2]/div/div/div[1]')
-}
+    dataframes[razon_social] = pd.read_excel(filename)[[
+            'Rut', 'Nombre', 'Sucursal', 'Centro de costo', 'Fecha',
+            'Entrada real', 'Salida real', 'Entrada turno', 'Salida turno',
+            'Turno', 'Permiso', 'Detalle permisos'
+        ]].rename(columns={
+            'Rut'               : 'rut',
+            'Nombre'            : 'nombre',
+            'Sucursal'          : 'sucursal',
+            'Centro de costo'   : 'centro',
+            'Fecha'             : 'fecha',
+            'Entrada real'      : 'entrada_real',
+            'Salida real'       : 'salida_real',
+            'Entrada turno'     : 'entrada_turno',
+            'Salida turno'      : 'salida_turno',
+            'Turno'             : 'turno',
+            'Permiso'           : 'permiso',
+            'Detalle permisos'  : 'detalle_permiso'
+        }).assign(colacion='00:45:00').assign(razon_social=razon_social)
 
-options = Options()
-prefs = {'download.default_directory' : CURRENT_DIRECTORY}
-options.add_experimental_option("prefs", prefs)
-# options.add_argument('--headless')
-# options.add_argument('--no-sandbox')
+DATA = pd.concat(list(dataframes.values()))[[
+    'rut', 'nombre', 'razon_social', 'sucursal', 'centro', 'fecha',
+    'entrada_real', 'salida_real', 'entrada_turno', 'salida_turno',
+    'turno', 'colacion', 'permiso', 'detalle_permiso'
+]]
 
-driver = webdriver.Chrome(service=Service('/usr/local/bin/chromedriver'),
-                          options=options)
-wait = WebDriverWait(driver=driver, timeout=10)
-driver.implicitly_wait(15)
+DATA.loc[pd.isnull(DATA['turno']), 'colacion'] = np.nan
 
-print("Opening Talana login page...\n")
-driver.get('https://talana.com/es/remuneraciones/login-vue#/')
-
-# Fill username and password fields, then press login button
-print("Logging in...")
-user_field = wait.until(EC.presence_of_element_located(
-    (By.XPATH, XPATHS['username'])
-))
-pass_field = wait.until(EC.presence_of_element_located(
-    (By.XPATH, XPATHS['password'])
-))
-user_field.send_keys(USERNAME)
-pass_field.send_keys(PASSWORD)
-
-login_btn = wait.until(EC.element_to_be_clickable(
-    (By.XPATH, XPATHS['login'])
-))
-sleep(5)
-login_btn.click()
-sleep(5)
-print(f'Logged into Talana as user {USERNAME}\n')
-
-# Go into section 'Reportes' of website
-print("Pointing driver to 'Reportes'...\n")
-driver.get('https://talana.com/es/asistencia/reportes/')
-
-# Go into 'Avanzados' subsection of 'Reportes'
-print("Pointing driver to 'Avanzados'...\n")
-avanzados_btn = wait.until(EC.presence_of_element_located(
-    (By.XPATH, XPATHS['avanzados'])
-))
-avanzados_btn.click()
-
-# Defining all components in 'Reporte' for the driver to use later
-reporte_semanal_btn = wait.until(EC.presence_of_element_located(
-    (By.XPATH, XPATHS['reporte_semanal'])
-))
+DATA.sort_values(by=['fecha', 'entrada_real'], inplace=True)

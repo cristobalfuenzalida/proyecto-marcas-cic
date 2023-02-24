@@ -16,9 +16,9 @@ DEFAULT_FILE_NAME = 'ReporteAvanzado.xlsx'
 CURRENT_DIRECTORY = os.getcwd()
 USERNAME = '14228822-2'
 PASSWORD = 'Andrea040188.'
-DAYS = 93
+DAYS = 31
 DATE_RANGE = f"{date.today() - timedelta(days=DAYS)} - {date.today()}"
-RAZONES_SOCIALES = ['CIC_RETAIL_SPA', 'COMPAÑIAS_CIC_SA']
+RAZONES_SOCIALES = ['CIC RETAIL SPA', 'COMPAÑIAS CIC S.A.']
 
 def replace_previous_file(filename):
     if not os.path.exists(DEFAULT_FILE_NAME):
@@ -177,7 +177,8 @@ for razon_social in RAZONES_SOCIALES:
     ))
     print(f'Download took {current_time} hrs.\n')
 
-    replace_previous_file(f'Reporte_{razon_social}.xlsx')
+    rs_file_format = razon_social.replace(' ', '_').replace('.', '_')
+    replace_previous_file(f'Reporte_{rs_file_format}.xlsx')
 
 print('Program finished successfully')
 driver.quit()
