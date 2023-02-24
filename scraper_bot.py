@@ -16,7 +16,7 @@ DEFAULT_FILE_NAME = 'ReporteAvanzado.xlsx'
 CURRENT_DIRECTORY = os.getcwd()
 USERNAME = '14228822-2'
 PASSWORD = 'Andrea040188.'
-DAYS = 0
+DAYS = 93
 DATE_RANGE = f"{date.today() - timedelta(days=DAYS)} - {date.today()}"
 RAZONES_SOCIALES = ['CIC_RETAIL_SPA', 'COMPAÑIAS_CIC_SA']
 
