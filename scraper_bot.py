@@ -59,8 +59,8 @@ XPATHS = {
 options = Options()
 prefs = {'download.default_directory' : CURRENT_DIRECTORY}
 options.add_experimental_option("prefs", prefs)
-# options.add_argument('--headless')
-# options.add_argument('--no-sandbox')
+options.add_argument('--headless')
+options.add_argument('--no-sandbox')
 
 driver = webdriver.Chrome(service=Service('/usr/local/bin/chromedriver'),
                           options=options)
