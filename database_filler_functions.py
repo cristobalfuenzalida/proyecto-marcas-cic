@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from datetime import timedelta as time
 from datetime import time as timeType
+from datetime import date
 import aux_functions as af
 import sys
 
@@ -183,9 +184,14 @@ def insert_dataframe(dataframe, table_name=None):
     cursor.close()
     return 0
 
-def clear_table(table_name, reset_index=True):
-    clear_query = f"DELETE FROM {table_name}"
-    reset_index_query = f"ALTER SEQUENCE {table_name}_id_seq RESTART WITH 1"
+def clear_marks(table_name, reset_index=True, fecha_desde=None):
+    if not fecha_desde:
+        fecha_desde = str(date.today() - time(days=31))
+    clear_query = f"DELETE FROM {table_name} WHERE fecha >= {fecha_desde}"
+    set_index_to_max = (
+        f"SELECT setval('{table_name}_id_seq',"
+        + f"COALESCE((SELECT MAX(id)+1 FROM {table_name}), 1), FALSE)"
+    )
     cursor = CONN.cursor()
     try:
         cursor.execute(clear_query)
@@ -195,20 +201,21 @@ def clear_table(table_name, reset_index=True):
         CONN.rollback()
         cursor.close()
         return 1
-    print(f"\nTable {table_name} has been correctly cleared.")
+    print(f"\nData from table {table_name} has been correctly cleared "
+          + f"for dates >= {fecha_desde}.")
 
     if not reset_index:
         cursor.close()
         return 0
     try:
-        cursor.execute(reset_index_query)
+        cursor.execute(set_index_to_max)
         CONN.commit()
     except (Exception, psycopg2.DatabaseError) as error:
         print(f"Error: {error}")
         CONN.rollback()
         cursor.close()
         return 1
-    print(f"Primary index of {table_name} has been correctly reset to 1.")
+    print(f"Primary index of {table_name} has been correctly reset to max+1.")
     cursor.close()
     return 0
 

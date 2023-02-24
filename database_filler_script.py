@@ -1,4 +1,4 @@
-# import scraper_bot
+import scraper_bot as sb
 import database_filler_functions as dff
 import aux_functions as af
 import pandas as pd
@@ -28,7 +28,6 @@ DATA = pd.read_excel(filename)[[
         'Entrada turno'     : 'entrada_turno',
         'Salida turno'      : 'salida_turno',
         'Turno'             : 'turno',
-        'Noche'             : 'noche',
         'Permiso'           : 'permiso',
         'Detalle permisos'  : 'detalle_permiso'
     }).assign(colacion='00:45:00')
@@ -46,7 +45,7 @@ AUX_TABLES = [
 ]
 
 #! Change to option = 's' to make whole process automatic and interrumpted
-option = None
+option = 'p'
 while option not in ['p', 's']:
     option = af.timeout_input(
         5, 'Print-Only or save into DataBase? (p/s): ', 'p')
@@ -54,15 +53,10 @@ print_mode = (option == 'p')
 if print_mode:
     print(DATA)
 else:
-    option = None
-    while option not in ['y', 'n']:
-        option = af.timeout_input(
-            5, 'Clear database tables first? (y/n): ', 'y')
-    if option == 'y':
-        dff.clear_table('datos_calculados', reset_index=False)
-        dff.clear_table('marcas_turnos', reset_index=True)
-        for table_name in AUX_TABLES:
-            dff.clear_table(table_name, reset_index=True)
+    dff.clear_marks('datos_calculados', reset_index=False,
+                    fecha_desde=sb.DAYS)
+    dff.clear_marks('marcas_turnos', reset_index=True,
+                    fecha_desde=sb.DAYS)
 
 dff.fill_aux_tables(DATA, AUX_TABLES, print_mode)
 dff.fill_marks_table(DATA, 'marcas_turnos', print_mode)

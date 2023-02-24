@@ -8,114 +8,99 @@ from selenium.webdriver.common.by import By
 from datetime import date, timedelta
 from datetime import time as dtime
 from time import sleep, time
-import select
+from aux_functions import timeout_input
 import sys
 import os
 
-def timeout_input(timeout, prompt="", timeout_value=None):
-    sys.stdout.write(prompt)
-    sys.stdout.flush()
-    ready, _, _ = select.select([sys.stdin], [], [], timeout)
-    if ready:
-        return sys.stdin.readline().rstrip('\n')
+DEFAULT_FILE_NAME = 'ReporteAvanzado.xlsx'
+CURRENT_DIRECTORY = os.getcwd()
+USERNAME = '14228822-2'
+PASSWORD = 'Andrea040188.'
+DAYS = 1
+DATE_RANGE = f"{date.today() - timedelta(days=DAYS)} - {date.today()}"
+RAZONES_SOCIALES = ['CIC_RETAIL_SPA', 'COMPAÑIAS_CIC_SA']
+
+def replace_previous_file(filename):
+    if not os.path.exists(DEFAULT_FILE_NAME):
+        return
+    if os.path.exists(filename):
+        print(f'Removing file {filename}...\n')
+        os.remove(filename)
     else:
-        sys.stdout.write('\n')
-        sys.stdout.flush()
-        return timeout_value
+        print("There is no previous file. Renaming new file in its place...")
+
+    os.rename(f"{CURRENT_DIRECTORY}/{DEFAULT_FILE_NAME}",
+              f"{CURRENT_DIRECTORY}/{filename}")
+
+XPATHS = {
+    'username'          : ('/html/body/div/div/main/div/div/div[1]'
+                           '/div/div/div[2]/form/div[1]/div[1]/input'),
+    'password'          : ('/html/body/div/div/main/div/div/div[1]'
+                           '/div/div/div[2]/form/div[3]/div[1]/div[1]/input'),
+    'login'             : ('/html/body/div/div/main/div/div/div[1]'
+                           '/div/div/div[2]/form/div[3]/div[2]/button[2]'),
+    'avanzados'         : ('/html/body/section[2]/section/div[2]'
+                           '/div[9]/div/div/div/div/div/ul/li[3]/a'),
+    'reporte_semanal'   : ('/html/body/section[2]/section/div[2]'
+                           '/div[9]/div/div/div/div/div/div/div[3]'
+                           '/div[2]/table/tbody/tr[2]/td/span'),
+    'date_range_field'  : ('/html/body/section[2]/section/div[2]/div[1]'
+                           '/div/div/div[2]/form/div[2]/div[1]/div/input'),
+    'razon_social_list' : ('/html/body/section[2]/section/div[2]/div[1]'
+                           '/div/div/div[2]/form/div[3]/div[1]/div/a/span[2]'),
+    RAZONES_SOCIALES[0] : '/html/body/div[21]/ul/li[2]',
+    RAZONES_SOCIALES[1] : '/html/body/div[21]/ul/li[3]',
+    'download_button'   : ('/html/body/section[2]/section/div[2]/div[1]'
+                           '/div/div/div[3]/button[3]'),
+    'down_percentage'   : ('/html/body/section[2]/section/div[2]/div[10]'
+                           '/div/div/div[2]/div/div/div[1]')
+}
 
 options = Options()
-download_directory = (os.getcwd())
-prefs = {'download.default_directory' : download_directory}
+prefs = {'download.default_directory' : CURRENT_DIRECTORY}
 options.add_experimental_option("prefs", prefs)
 # options.add_argument('--headless')
 # options.add_argument('--no-sandbox')
 
 driver = webdriver.Chrome(service=Service('/usr/local/bin/chromedriver'),
                           options=options)
-
-USERNAME = '14228822-2'
-PASSWORD = 'Andrea040188.'
-URL = 'https://talana.com/es/remuneraciones/login-vue?next=/es/asistencia/#/'
-
-driver.get(URL)
-
 wait = WebDriverWait(driver=driver, timeout=10)
 driver.implicitly_wait(15)
 
-# Fill username field
-user_xpath = ('/html/body/div/div/main/div/div/div[1]'
-            '/div/div/div[2]/form/div[1]/div[1]/input')
+print("Opening Talana login page...\n")
+driver.get('https://talana.com/es/remuneraciones/login-vue#/')
 
-user_field = wait.until(EC.presence_of_element_located((By.XPATH, user_xpath)))
+# Fill username and password fields, then press login button
+print("Logging in...")
+user_field = wait.until(EC.presence_of_element_located(
+    (By.XPATH, XPATHS['username'])
+))
+pass_field = wait.until(EC.presence_of_element_located(
+    (By.XPATH, XPATHS['password'])
+))
 user_field.send_keys(USERNAME)
-
-# Fill password field
-pass_xpath = ('/html/body/div/div/main/div/div/div[1]'
-            '/div/div/div[2]/form/div[3]/div[1]/div[1]/input')
-
-pass_field = wait.until(EC.presence_of_element_located((By.XPATH, pass_xpath)))
 pass_field.send_keys(PASSWORD)
 
-# Click login button (after a 5 second delay)
-login_xpath = ('/html/body/div/div/main/div/div/div[1]'
-               '/div/div/div[2]/form/div[3]/div[2]/button[2]')
-
-login_btn = wait.until(EC.element_to_be_clickable((By.XPATH, login_xpath)))
+login_btn = wait.until(EC.element_to_be_clickable(
+    (By.XPATH, XPATHS['login'])
+))
 sleep(5)
 login_btn.click()
 sleep(5)
 print(f'Logged into Talana as user {USERNAME}\n')
 
-# Go into section 'Reportes' from dashboard
+# Go into section 'Reportes' of website
+print("Pointing driver to 'Reportes'...\n")
 driver.get('https://talana.com/es/asistencia/reportes/')
 
 # Go into 'Avanzados' subsection of 'Reportes'
-avnz_xpath = ('/html/body/section[2]/section/div[2]'
-              '/div[9]/div/div/div/div/div/ul/li[3]/a')
+print("Pointing driver to 'Avanzados'...\n")
+avanzados_btn = wait.until(EC.presence_of_element_located(
+    (By.XPATH, XPATHS['avanzados'])
+))
+avanzados_btn.click()
 
-avnz_btn = wait.until(EC.presence_of_element_located((By.XPATH, avnz_xpath)))
-avnz_btn.click()
-
-# Open options to download 'Reporte semanal por rut'
-rspr_xpath = ('/html/body/section[2]/section/div[2]'
-              '/div[9]/div/div/div/div/div/div/div[3]'
-              '/div[2]/table/tbody/tr[2]/td/span')
-
-rspr_btn = wait.until(EC.presence_of_element_located((By.XPATH, rspr_xpath)))
-rspr_btn.click()
-
-# Unmark unnecessary checkboxes
-
-for (i, j) in [(3, 1), (3, 2), (5, 1), (5, 2), (5, 4), (5, 5), (6, 2)]:
-    sleep(0.4)
-    box_xpath = ('/html/body/section[2]/section/div[2]/div[1]/div/div/div[2]'
-                + f'/form/div[1]/div[{i}]/div[{j}]/label/input')
-    checkbox = wait.until(EC.presence_of_element_located((By.XPATH, box_xpath)))
-    checkbox.click()
-
-
-# Replace default date range input with custom range
-date_xpath = ('/html/body/section[2]/section/div[2]'
-              '/div[1]/div/div/div[2]/form/div[2]/div[1]/div/input')
-
-today = date.today()
-delta = timedelta(days=15)
-
-DATE_RANGE = f"{today - delta} - {today}"
-
-date_field = wait.until(EC.presence_of_element_located((By.XPATH, date_xpath)))
-date_field.clear()
-date_field.send_keys(DATE_RANGE)
-date_field.send_keys(Keys.ENTER)
-date_field.send_keys(Keys.TAB)
-
-# Filter by 'Razón Social'
-rs_list_xpath = ('/html/body/section[2]/section/div[2]'
-                 '/div[1]/div/div/div[2]/form/div[3]/div[1]/div/a/span[2]')
-rs_coll = wait.until(EC.presence_of_element_located((By.XPATH, rs_list_xpath)))
-rs_coll.click()
-
-rs_select_xpath = ('/html/body/div[21]/ul/li[2]')
-razon_social = wait.until(
-    EC.presence_of_element_located((By.XPATH, rs_select_xpath)))
-razon_social.click()
+# Defining all components in 'Reporte' for the driver to use later
+reporte_semanal_btn = wait.until(EC.presence_of_element_located(
+    (By.XPATH, XPATHS['reporte_semanal'])
+))
