@@ -1,14 +1,19 @@
-import database_filler_functions as dff
-import aux_functions as af
-from datetime import timedelta as time
-from datetime import date
+import datetime
 import pandas as pd
 import numpy as np
 import sys
 import os
 
-dataframes = {}
+inicio_ejecucion = datetime.datetime.now()
+
+#import scraper_bot as sb
+import aux_functions as af
+import database_filler_functions as dff
+
+TURNOS_CELL_RANGE = 'Turnos!A1:B200'
 RAZONES_SOCIALES = ['CIC RETAIL SPA', 'COMPAÑIAS CIC S.A.']
+
+dataframes = {}
 
 for razon_social in RAZONES_SOCIALES:
     rs_file_format = razon_social.replace(' ', '_').replace('.', '_')
@@ -27,9 +32,9 @@ for razon_social in RAZONES_SOCIALES:
         ]].rename(columns={
             'Rut'               : 'rut',
             'Nombre'            : 'nombre',
+            'Fecha'             : 'fecha',
             'Sucursal'          : 'sucursal',
             'Centro de costo'   : 'centro',
-            'Fecha'             : 'fecha',
             'Entrada real'      : 'entrada_real',
             'Salida real'       : 'salida_real',
             'Entrada turno'     : 'entrada_turno',
@@ -37,14 +42,53 @@ for razon_social in RAZONES_SOCIALES:
             'Turno'             : 'turno',
             'Permiso'           : 'permiso',
             'Detalle permisos'  : 'detalle_permiso'
-        }).assign(colacion='00:45:00').assign(razon_social=razon_social)
+        }).assign(colacion=np.nan).assign(razon_social=razon_social)
 
 DATA = pd.concat(list(dataframes.values()))[[
-    'rut', 'nombre', 'razon_social', 'sucursal', 'centro', 'fecha',
+    'rut', 'nombre', 'fecha', 'razon_social', 'sucursal', 'centro',
     'entrada_real', 'salida_real', 'entrada_turno', 'salida_turno',
     'turno', 'colacion', 'permiso', 'detalle_permiso'
 ]]
 
-DATA.loc[pd.isnull(DATA['turno']), 'colacion'] = np.nan
-
 DATA.sort_values(by=['fecha', 'entrada_real'], inplace=True)
+
+DATA.reset_index(drop=True, inplace=True)
+
+# execution_mode = None
+# while execution_mode not in ['print', 'save']:
+#     execution_mode = af.timeout_input(
+#         10, 'Print-Only or save into DataBase? (print/save): ', 'print')
+
+# dff.update_aux_tables(DATA, execution_mode=execution_mode)
+# dff.update_turnos(DATA, TURNOS_CELL_RANGE, execution_mode)
+
+# if execution_mode == 'save':
+#     # Clear tables 'marcas_turnos' and 'datos_calculados' from a date onwards
+#     fecha_desde = DATA.fecha.min()
+#     fecha_hasta = DATA.fecha.max()
+#     dff.clear_marks('marcas_turnos', fecha_desde)
+#     dff.clear_marks('datos_calculados', fecha_desde)
+
+# dff.fill_marks_table(DATA, 'marcas_turnos', execution_mode)
+
+# #TODO Register latest execution to log
+
+# fin_ejecucion = datetime.datetime.now()
+
+# if execution_mode == 'save':
+#     cursor = dff.CONN.cursor()
+
+#     log = pd.DataFrame({
+#         'fecha'             : [inicio_ejecucion.strftime("%Y-%m-%d")],
+#         'hora_ejecucion'    : [inicio_ejecucion.strftime("%H:%M:%S")],
+#         'hora_termino'      : [fin_ejecucion.strftime("%H:%M:%S")],
+#         'rango_inicio'      : [fecha_desde],
+#         'rango_fin'         : [fecha_hasta]
+#     })
+#     dff.insert_dataframe(log, 'log_ejecuciones')
+
+#     cursor.close()
+
+# print("Closing connection...")
+# dff.CONN.close()
+# print("Program finished successfully")

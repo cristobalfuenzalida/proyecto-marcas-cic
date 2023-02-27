@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Excel files
+*.xlsx
+
+# Google service account key
+google-service-account-key.json

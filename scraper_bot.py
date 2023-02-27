@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from datetime import date, timedelta
 from datetime import time as dtime
 from time import sleep, time
-from aux_functions import timeout_input
+from aux_functions import timeout_input, RAZONES_SOCIALES
 import sys
 import os
 
@@ -18,7 +18,6 @@ USERNAME = '14228822-2'
 PASSWORD = 'Andrea040188.'
 DAYS = 31
 DATE_RANGE = f"{date.today() - timedelta(days=DAYS)} - {date.today()}"
-RAZONES_SOCIALES = ['CIC RETAIL SPA', 'COMPAÑIAS CIC S.A.']
 
 def replace_previous_file(filename):
     if not os.path.exists(DEFAULT_FILE_NAME):
