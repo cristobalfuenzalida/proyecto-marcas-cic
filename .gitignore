@@ -133,3 +133,6 @@ dmypy.json
 
 # Google service account key
 google-service-account-key.json
+
+# Exclude old files directory
+old_files/

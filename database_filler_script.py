@@ -6,7 +6,7 @@ import os
 
 inicio_ejecucion = datetime.datetime.now()
 
-# import scraper_bot as sb
+import scraper_bot as sb
 import aux_functions as af
 import database_filler_functions as dff
 
@@ -69,7 +69,7 @@ if execution_mode == 'save':
 
 dff.fill_marks_table(DATA, 'marcas_turnos', execution_mode)
 
-#TODO Register latest execution to log
+#? Register latest execution to log
 
 fin_ejecucion = datetime.datetime.now()
 

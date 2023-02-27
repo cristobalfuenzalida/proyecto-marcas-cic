@@ -442,9 +442,8 @@ def fill_marks_table(dataframe, table_name=None, execution_mode='print'):
         print(marks_df)
         results = fill_results_dataframe(dataframe, execution_mode='print')
         columns_to_use = results.columns.difference(marks_df.columns)
-        final_dataframe = pd.concat(
-            [marks_df, results[columns_to_use]], axis=1, join='inner'
-        )[[
+        final_dataframe = pd.concat([marks_df, results[columns_to_use]],
+                                    axis=1, join='inner')[[
             'rut', 'fecha', 'razon_social', 'sucursal', 'centro',
             'entrada_real', 'salida_real', 'turno', 'colacion',
             't_asignado', 't_asistido', 't_atraso', 't_anticipo',
@@ -452,7 +451,6 @@ def fill_marks_table(dataframe, table_name=None, execution_mode='print'):
         ]]
         timeout_input(5, f"\nFull DataFrame '{table_name}' (Local):", None)
         print(final_dataframe)
-
         return 0
 
     queries = {
@@ -533,7 +531,6 @@ def fill_results_dataframe(dataframe, execution_mode='print'):
     daily_results = {
         'persona_id'        : [],
         'fecha'             : [],
-        'razon_social'      : [],
         'turno_id'          : [],
         't_asignado'        : [],
         't_asistido'        : [],
@@ -558,13 +555,14 @@ def fill_results_dataframe(dataframe, execution_mode='print'):
                 row.entrada_turno, row.salida_turno, row.salida_real,
                 row.colacion, row.permiso, row.detalle_permiso),
         }
-        for key in ['fecha', 'razon_social', 'sucursal_id', 'centro_id', 'turno_id', 'permiso_id']:
-            #! FINISH HERE
-            continue
         if execution_mode == 'print':
             daily_results['persona_id'].append(row['rut'])
+            daily_results['fecha'].append(row['fecha'])
+            daily_results['turno_id'].append(row['turno'])
         else:
-            daily_results['persona_id'].append(row['rut'])
+            daily_results['persona_id'].append(row['persona_id'])
+            daily_results['fecha'].append(row['fecha'])
+            daily_results['turno_id'].append(row['turno_id'])
 
         for key in tiempos.keys():
             daily_results[key].append(timedelta_to_number(tiempos[key]))

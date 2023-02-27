@@ -179,5 +179,5 @@ for razon_social in RAZONES_SOCIALES:
     rs_file_format = razon_social.replace(' ', '_').replace('.', '_')
     replace_previous_file(f'Reporte_{rs_file_format}.xlsx')
 
-print('Program finished successfully')
+print('Scraper bot finished successfully')
 driver.quit()

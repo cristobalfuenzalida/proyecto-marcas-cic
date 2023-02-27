@@ -6,16 +6,15 @@ import os
 
 inicio_ejecucion = datetime.datetime.now()
 
-#import scraper_bot as sb
+# import scraper_bot as sb
 import aux_functions as af
 import database_filler_functions as dff
 
 TURNOS_CELL_RANGE = 'Turnos!A1:B200'
-RAZONES_SOCIALES = ['CIC RETAIL SPA', 'COMPAÑIAS CIC S.A.']
 
 dataframes = {}
 
-for razon_social in RAZONES_SOCIALES:
+for razon_social in af.RAZONES_SOCIALES:
     rs_file_format = razon_social.replace(' ', '_').replace('.', '_')
     filename = f"Reporte_{rs_file_format}.xlsx"
 
