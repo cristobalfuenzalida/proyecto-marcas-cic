@@ -4,7 +4,8 @@ import numpy as np
 import sys
 import os
 
-inicio_ejecucion = datetime.datetime.now()
+TZ_ADJUST = datetime.timedelta(seconds=-10800)
+inicio_ejecucion = datetime.datetime.now() + TZ_ADJUST
 
 import scraper_bot as sb
 import aux_functions as af
@@ -71,7 +72,7 @@ dff.fill_marks_table(DATA, 'marcas_turnos', execution_mode)
 
 #? Register latest execution to log
 
-fin_ejecucion = datetime.datetime.now()
+fin_ejecucion = datetime.datetime.now() + TZ_ADJUST
 
 if execution_mode == 'save':
     cursor = dff.CONN.cursor()
