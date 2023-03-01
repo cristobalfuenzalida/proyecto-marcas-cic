@@ -11,7 +11,7 @@ import scraper_bot as sb
 import aux_functions as af
 import database_filler_functions as dff
 
-TURNOS_CELL_RANGE = 'Turnos!A1:B200'
+TURNOS_CELL_RANGE = 'Turnos!A1:B1000'
 
 dataframes = {}
 
