@@ -54,7 +54,7 @@ DATA.sort_values(by=['fecha', 'entrada_real'], inplace=True)
 
 DATA.reset_index(drop=True, inplace=True)
 
-execution_mode = None
+execution_mode = 'save'
 while execution_mode not in ['print', 'save']:
     execution_mode = af.timeout_input(
         10, 'Print-Only or save into DataBase? (print/save): ', 'save')

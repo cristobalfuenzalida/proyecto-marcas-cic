@@ -159,13 +159,14 @@ for razon_social in RAZONES_SOCIALES:
             print('File download complete!')
             break
         print(f'File download in progress   : {percentage}%')
-        user_input = timeout_input(5, "To cancel download, press X : ", '')
-        print()
-        if user_input.upper() == 'X':
-            print('Download canceled...')
-            print('Program ended early')
-            driver.quit()
-            sys.exit(0)
+        sleep(10)
+        # user_input = timeout_input(5, "To cancel download, press X : ", '')
+        # print()
+        # if user_input.upper() == 'X':
+        #     print('Download canceled...')
+        #     print('Program ended early')
+        #     driver.quit()
+        #     sys.exit(0)
 
     total_seconds = int(time() - start)
 

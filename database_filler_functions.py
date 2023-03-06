@@ -515,7 +515,7 @@ def fill_marks_table(dataframe, table_name=None, execution_mode='print'):
         't_permiso_cg', 'permiso_id', 'detalle_permiso'
     ]]
 
-    option = None
+    option = 'y'
     while option not in ['y', 'n']:
         option = timeout_input(
             10, f"\nInsert DataFrame into table '{table_name}' (y/n)?: ", 'y')
