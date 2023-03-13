@@ -7,7 +7,7 @@ import os
 TZ_ADJUST = datetime.timedelta(seconds=-10800)
 inicio_ejecucion = datetime.datetime.now() + TZ_ADJUST
 
-import scraper_bot as sb
+import scraper_bot
 import aux_functions as af
 import database_filler_functions as dff
 
@@ -28,26 +28,30 @@ for razon_social in af.RAZONES_SOCIALES:
     dataframes[razon_social] = pd.read_excel(filename)[[
             'Rut', 'Nombre', 'Sucursal', 'Centro de costo', 'Fecha',
             'Entrada real', 'Salida real', 'Entrada turno', 'Salida turno',
-            'Turno', 'Permiso', 'Detalle permisos'
+            'Llegada tardia. corr.', 'Salida temp. corr.', 'Turno',
+            'Permiso', 'Detalle permisos'
         ]].rename(columns={
-            'Rut'               : 'rut',
-            'Nombre'            : 'nombre',
-            'Fecha'             : 'fecha',
-            'Sucursal'          : 'sucursal',
-            'Centro de costo'   : 'centro',
-            'Entrada real'      : 'entrada_real',
-            'Salida real'       : 'salida_real',
-            'Entrada turno'     : 'entrada_turno',
-            'Salida turno'      : 'salida_turno',
-            'Turno'             : 'turno',
-            'Permiso'           : 'permiso',
-            'Detalle permisos'  : 'detalle_permiso'
+            'Rut'                   : 'rut',
+            'Nombre'                : 'nombre',
+            'Fecha'                 : 'fecha',
+            'Sucursal'              : 'sucursal',
+            'Centro de costo'       : 'centro',
+            'Entrada real'          : 'entrada_real',
+            'Salida real'           : 'salida_real',
+            'Entrada turno'         : 'entrada_turno',
+            'Salida turno'          : 'salida_turno',
+            'Llegada tardia. corr.' : 'horas_atraso',
+            'Salida temp. corr.'    : 'horas_anticipo',
+            'Turno'                 : 'turno',
+            'Permiso'               : 'permiso',
+            'Detalle permisos'      : 'detalle_permiso'
         }).assign(colacion=np.nan).assign(razon_social=razon_social)
 
 DATA = pd.concat(list(dataframes.values()))[[
     'rut', 'nombre', 'fecha', 'razon_social', 'sucursal', 'centro',
     'entrada_real', 'salida_real', 'entrada_turno', 'salida_turno',
-    'turno', 'colacion', 'permiso', 'detalle_permiso'
+    'horas_atraso', 'horas_anticipo', 'turno', 'colacion',
+    'permiso', 'detalle_permiso'
 ]]
 
 DATA.sort_values(by=['fecha', 'entrada_real'], inplace=True)

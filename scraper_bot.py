@@ -16,7 +16,7 @@ DEFAULT_FILE_NAME = 'ReporteAvanzado.xlsx'
 CURRENT_DIRECTORY = os.getcwd()
 USERNAME = '14228822-2'
 PASSWORD = 'Andrea040188.'
-DAYS = 31
+DAYS = 0
 DATE_RANGE = f"{date.today() - timedelta(days=DAYS)} - {date.today()}"
 
 def replace_previous_file(filename):
@@ -122,17 +122,21 @@ for razon_social in RAZONES_SOCIALES:
     ))
     # ------------------------------------------------------------------------
     print("Unmarking unnecesary option checkboxes...\n")
-    for (i, j) in [(3, 1), (3, 2), (5, 1), (5, 2), (5, 4),
-                   (5, 5), (6, 2), (6, 3)]:
+    for (i, j) in [(3, 1), (3, 2), (5, 1), (5, 2), (6, 2), (6, 3)]:
         cb_xpath = ('/html/body/section[2]/section/div[2]/div[1]/div/div/div[2]'
-                    + f'/form/div[1]/div[{i}]/div[{j}]/label/input')
+                    + f'/form/div[1]/div[{i}]/div[{j}]/label')
         checkbox = wait.until(EC.presence_of_element_located(
+            (By.XPATH, (cb_xpath + '/input'))
+        ))
+        checkbox_text = wait.until(EC.presence_of_element_located(
             (By.XPATH, cb_xpath)
         ))
         checkbox.click()
+        print(f"Unmarking checkbox '{checkbox_text.text}'")
         sleep(0.5)
 
-    print("Setting date range for data...\n")
+    print("\nSetting date range for data...")
+    print(f"-> Date range: '{DATE_RANGE}'\n")
     date_range_field.clear()
     date_range_field.send_keys(DATE_RANGE)
     date_range_field.send_keys(Keys.ENTER)
