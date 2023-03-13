@@ -16,7 +16,7 @@ DEFAULT_FILE_NAME = 'ReporteAvanzado.xlsx'
 CURRENT_DIRECTORY = os.getcwd()
 USERNAME = '14228822-2'
 PASSWORD = 'Andrea040188.'
-DAYS = 0
+DAYS = 31
 DATE_RANGE = f"{date.today() - timedelta(days=DAYS)} - {date.today()}"
 
 def replace_previous_file(filename):
@@ -47,8 +47,8 @@ XPATHS = {
                            '/div/div/div[2]/form/div[2]/div[1]/div/input'),
     'razon_social_list' : ('/html/body/section[2]/section/div[2]/div[1]'
                            '/div/div/div[2]/form/div[3]/div[1]/div/a/span[2]'),
-    RAZONES_SOCIALES[0] : '/html/body/div[21]/ul/li[2]',
-    RAZONES_SOCIALES[1] : '/html/body/div[23]/ul/li[3]',
+    RAZONES_SOCIALES[0] : '/html/body/div[22]/ul/li[2]',
+    RAZONES_SOCIALES[1] : '/html/body/div[24]/ul/li[3]',
     'download_button'   : ('/html/body/section[2]/section/div[2]/div[1]'
                            '/div/div/div[3]/button[3]'),
     'down_percentage'   : ('/html/body/section[2]/section/div[2]/div[10]'
@@ -150,7 +150,7 @@ for razon_social in RAZONES_SOCIALES:
     razon_social_btn.click()
     sleep(3)
 
-    print(f'Starting download...\n')
+    print('Starting download...\n')
     down_btn.click()
     start = time()
     while True:

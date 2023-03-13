@@ -224,7 +224,7 @@ def update_personas(dataframe, execution_mode='print'):
 
     cursor = CONN.cursor()
     response_api = requests.get(
-        url=f'https://talana.com/es/api/persona/',
+        url='https://talana.com/es/api/persona/',
         auth=('integracion-empleados-asistencia-Bi@cic.cl',
               'PresenteHilarante2969#')
     )
@@ -254,7 +254,7 @@ def update_personas(dataframe, execution_mode='print'):
         cursor.close()
         return 1
 
-    print(f"-> Table 'personas' has been updated with new values")
+    print("-> Table 'personas' has been updated with new values")
     cursor.close()
     return 0
 
@@ -267,7 +267,7 @@ def update_sucursales(dataframe, execution_mode='print'):
 
     cursor = CONN.cursor()
     response_api = requests.get(
-        url=f'https://talana.com/es/api/sucursal/',
+        url='https://talana.com/es/api/sucursal/',
         auth=('integracion-empleados-asistencia-Bi@cic.cl',
               'PresenteHilarante2969#')
     )
@@ -297,7 +297,7 @@ def update_sucursales(dataframe, execution_mode='print'):
         cursor.close()
         return 1
 
-    print(f"-> Table 'sucursales' has been updated with new values")
+    print("-> Table 'sucursales' has been updated with new values")
     cursor.close()
     return 0
 
@@ -327,7 +327,7 @@ def update_centros_de_costo(dataframe, execution_mode='print'):
         cursor.close()
         return 1
 
-    print(f"-> Table 'centros_de_costo' has been updated with new values")
+    print("-> Table 'centros_de_costo' has been updated with new values")
     cursor.close()
     return 0
 
@@ -388,7 +388,7 @@ def update_turnos(dataframe, data_to_pull=None, execution_mode='print'):
         cursor.close()
         return 1
 
-    print(f"-> Table 'turnos' has been updated from Google Sheets to DataBase")
+    print("-> Table 'turnos' has been updated from Google Sheets to DataBase")
     cursor.close()
     return 0
 
@@ -495,6 +495,8 @@ def fill_marks_table(dataframe, table_name=None, execution_mode='print'):
         'salida_real'       : [],
         'entrada_turno'     : [],
         'salida_turno'      : [],
+        'horas_atraso'      : [],
+        'horas_anticipo'    : [],
         'colacion'          : [],
         'turno_id'          : [],
         'permiso_id'        : [],
