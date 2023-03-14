@@ -136,3 +136,6 @@ google-service-account-key.json
 
 # Exclude old files directory
 old_files/
+
+# Exclude folder customization file
+.DS_Store
