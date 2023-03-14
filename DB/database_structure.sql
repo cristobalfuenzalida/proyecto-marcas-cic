@@ -97,6 +97,12 @@ CREATE TABLE marcas_turnos (
     detalle_permiso VARCHAR(40)
 );
 
+-- Creación de tabla contrato con datos de API Talana
+CREATE TABLE contratos (
+    id              INT         PRIMARY KEY,
+    
+);
+
 -- Creación de vista resultados_diarios
 CREATE OR REPLACE VIEW resultados_diarios (
     id, rut, fecha, sucursal, centro_costo, t_asignado, t_asistido,
