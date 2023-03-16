@@ -20,7 +20,7 @@ WITH resultados_agregados AS (
         SUM(t_ausencia)     AS suma_t_ausencias,
         SUM(t_permiso_cg)   AS suma_t_permiso_cg
     FROM    resultados_diarios
-    WHERE   fecha   BETWEEN '2023-01-01' AND '2023-02-27'
+    WHERE   fecha   BETWEEN '2023-02-12' AND '2023-03-15'
     GROUP BY rut
 )   SELECT  *
     FROM    resultados_agregados
