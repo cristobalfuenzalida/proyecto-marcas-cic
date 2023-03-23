@@ -97,17 +97,20 @@ CREATE TABLE marcas_turnos (
     detalle_permiso VARCHAR(40)
 );
 
--- Creación de tabla contrato con datos de API Talana
+-- Creación de tabla contratos con datos de API Talana
 CREATE TABLE contratos (
-    id              INT             PRIMARY KEY,
-    contrato        VARCHAR(50)     NOT NULL,
-    persona_id      INT             NOT NULL,
-    tipo_contrato   VARCHAR(20),
-    razon_social_id    INT,
-    cargo           VARCHAR(60),
-    sucursal_id     INT,
-    centro_id       INT,
-    sueldo_bool     BOOLEAN
+    id                  INT             PRIMARY KEY,
+    contrato            VARCHAR(50)     NOT NULL,
+    persona_id          INT             REFERENCES personas(id)     NOT NULL,
+    tipo_contrato       VARCHAR(40),
+    razon_social_id     INT,
+    cargo               VARCHAR(80),
+    sucursal_id         INT,
+    centro_id           INT,
+    unidad_org_id       INT,
+    vigente             BOOLEAN,
+    sueldo_bool         BOOLEAN,
+    rol_privado         BOOLEAN
 );
 
 -- Creación de vista resultados_diarios
