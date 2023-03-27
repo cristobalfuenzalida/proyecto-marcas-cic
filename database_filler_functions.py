@@ -185,7 +185,6 @@ def clear_marks(table_name, fecha_desde=None):
     if not fecha_desde or type(fecha_desde) is not str:
         print("Value of 'fecha_desde' is either not present or not str.")
         fecha_desde = str(datetime.date.today() - time(days=31))
-        timeout_input(15, "\nContinue by pressing any key...", None)
     clear_query = f"DELETE FROM {table_name} WHERE fecha >= '{fecha_desde}'"
     set_index_to_max = (
         f"SELECT setval('{table_name}_id_seq',"
