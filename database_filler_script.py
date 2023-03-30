@@ -64,7 +64,7 @@ while execution_mode not in ['print', 'save']:
         10, 'Print-Only or save into DataBase? (print/save): ', 'save')
 
 dff.update_aux_tables(DATA, execution_mode=execution_mode)
-dff.update_turnos(DATA, TURNOS_CELL_RANGE, execution_mode)
+dff.update_turnos(DATA, TURNOS_CELL_RANGE, execution_mode=execution_mode)
 
 if execution_mode == 'save':
     # Clear tables 'marcas_turnos' and 'datos_calculados' from a date onwards
