@@ -5,7 +5,8 @@ import psycopg2.extras as extras
 from datetime import date
 
 DEFAULT_QUERY = "INSERT INTO %s(%s) VALUES %%s"
-UPSERT_QUERY = "INSERT INTO %s(%s) VALUES %%s ON CONFLICT (%s) DO NOTHING"
+UPSERT_QUERY = ("INSERT INTO %s(%s) VALUES %%s "
+                "ON CONFLICT (%s) DO UPDATE")
 RAZONES_SOCIALES = {
     9415    : 'CIC RETAIL SPA',
     9414    : 'COMPAÑIAS CIC S.A.',
@@ -14,12 +15,21 @@ RAZONES_SOCIALES = {
 TODAY = date.today()
 
 CONN = psycopg2.connect(
-    database    = 'asistencias_cic',
+    database    = 'dotacion_vigente',
     user        = 'dyatec',
     password    = 'dyatec2023',
     host        = 'localhost',
     port        = '5432'
 )
+
+def nan_to_null(f,
+        _null=psycopg2.extensions.AsIs('NULL'),
+        _float=psycopg2.extensions.Float):
+    if not np.isnan(f):
+        return _float(f)
+    return _null
+
+psycopg2.extensions.register_adapter(float, nan_to_null)
 
 def insert_dataframe(dataframe, table_name=None):
     if not table_name:
@@ -41,8 +51,6 @@ def insert_dataframe(dataframe, table_name=None):
     print(f"-> Dataframe has been inserted correctly into table {table_name}")
     cursor.close()
     return 0
-
-CONN.close()
 
 def update_personas(dataframe):
     personas_dict = {
@@ -131,6 +139,7 @@ def calcular_antiguedad(fecha_inicio, fecha_fin):
     return antiguedad
 
 paises = pd.read_json('paises.json')
+ubicaciones = pd.read_json('ubicaciones_geograficas.json')
 
 nacionalidades = {}
 
@@ -177,11 +186,11 @@ data = {
     'nombre_centro'     : [],
     'fecha_ingreso'     : [],
     'antiguedad'        : [],
-    'ciudad'            : [],
-    'comuna'            : [],
-    'calle'             : [],
-    'numero'            : [],
-    'departamento'      : [],
+    'direccion_ciudad'  : [],
+    'direccion_comuna'  : [],
+    'direccion_calle'   : [],
+    'direccion_numero'  : [],
+    'direccion_depto'   : [],
     'es_pensionado'     : [],
     'discapacidades'    : [],
     'contrato_hasta'    : [],
@@ -248,11 +257,29 @@ for index, row in contratos.iterrows():
 
     detalles = row['empleadoDetails']['detalles'][0]
 
-    data['ciudad'].append(detalles['direccionCiudad'])
-    data['comuna'].append(detalles['direccionComuna'])
-    data['calle'].append(detalles['direccionCalle'])
-    data['numero'].append(detalles['direccionNumero'])
-    data['departamento'].append(detalles['direccionDepartamento'])
+    if pd.isnull(detalles['direccionCiudad']):
+        data['direccion_ciudad'].append(np.nan)
+    else:
+        ciudad = ubicaciones.loc[ubicaciones.id==detalles['direccionCiudad']]
+        if ciudad.empty:
+            ciudad_texto = f"Ciudad [{detalles['direccionCiudad']}]"
+            data['direccion_ciudad'].append(ciudad_texto)
+        else:
+            data['direccion_ciudad'].append(ciudad.iloc[0].nombre)
+
+    if pd.isnull(detalles['direccionComuna']):
+        data['direccion_comuna'].append(np.nan)
+    else:
+        comuna = ubicaciones.loc[ubicaciones.id==detalles['direccionComuna']]
+        if comuna.empty:
+            comuna_texto = f"Comuna [{detalles['direccionComuna']}]"
+            data['direccion_comuna'].append(comuna_texto)
+        else:
+            data['direccion_comuna'].append(comuna.iloc[0].nombre)
+
+    data['direccion_calle'].append(detalles['direccionCalle'])
+    data['direccion_numero'].append(detalles['direccionNumero'])
+    data['direccion_depto'].append(detalles['direccionDepartamento'])
     data['es_pensionado'].append(row['esPensionado'])
     data['discapacidades'].append(detalles['discapacidades'])
     data['contrato_hasta'].append(row['hasta'])
@@ -302,4 +329,21 @@ for key in data.keys():
 
 DATA = pd.DataFrame(data)
 
-# insert_dataframe(DATA, table_name='contratos')
+def max_len(string_list):
+    max_len = -1
+    index = -1
+    for i in range(len(string_list)):
+        if type(string_list[i]) is str and len(string_list[i]) > max_len:
+            max_len = len(string_list[i])
+            index = i
+    if max_len == -1:
+        return '', -1, ''
+    else:
+        return max_len, index, string_list[index]
+
+# for key in data:
+#     print(f"{key}{' ' * (20 - len(key))} : {max_len(data[key])[0]}")
+
+insert_dataframe(DATA, table_name='contratos')
+
+CONN.close()
