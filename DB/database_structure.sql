@@ -21,14 +21,15 @@ CREATE TABLE log_ejecuciones (
 
 -- Creación de tabla razones sociales con datos ingresados manualmente
 CREATE TABLE razones_sociales (
-    id              SERIAL          PRIMARY KEY,
+    id              PRIMARY KEY,
     razon_social    VARCHAR(50)     NOT NULL            UNIQUE
 );
 -- Inserción de valores predeterminados 
 INSERT INTO razones_sociales (id, razon_social)
 VALUES
-    (DEFAULT, 'CIC RETAIL SPA'),
-    (DEFAULT, 'COMPAÑIAS CIC S.A.')
+    (9415, 'CIC RETAIL SPA'),
+    (9414, 'COMPAÑIAS CIC S.A.')
+    (9425, 'Externos')
 ON CONFLICT (razon_social) DO NOTHING;
 
 -- Creación de tabla personas directamente desde API
@@ -46,7 +47,8 @@ CREATE TABLE sucursales (
 
 -- Creación de tabla centros_de_costo directamente desde Excel
 CREATE TABLE centros_de_costo (
-    id              SERIAL          PRIMARY KEY,
+    id              PRIMARY KEY,
+    codigo          VARCHAR(5)
     centro          VARCHAR(50)     NOT NULL            UNIQUE
 );
 
@@ -100,17 +102,39 @@ CREATE TABLE marcas_turnos (
 -- Creación de tabla contratos con datos de API Talana
 CREATE TABLE contratos (
     id                  INT             PRIMARY KEY,
-    contrato            VARCHAR(50)     NOT NULL,
-    persona_id          INT             REFERENCES personas(id)     NOT NULL,
-    tipo_contrato       VARCHAR(40),
-    razon_social_id     INT,
-    cargo               VARCHAR(80),
-    sucursal_id         INT,
-    centro_id           INT,
-    unidad_org_id       INT,
-    vigente             BOOLEAN,
-    sueldo_bool         BOOLEAN,
-    rol_privado         BOOLEAN
+    id_contrato         VARCHAR(40)     NOT NULL,
+    rut                 VARCHAR(10)     NOT NULL,
+    nombre              VARCHAR(40)     NOT NULL,
+    apellido_paterno    VARCHAR(20)     NOT NULL,
+    apellido_materno    VARCHAR(20),
+    razon_social        VARCHAR(20)     NOT NULL,
+    fecha_nacimiento    DATE,
+    nacionalidad        VARCHAR(20),
+    sexo                CHAR,
+    cargo               VARCHAR(70),
+    codigo_centro       VARCHAR(5),
+    nombre_centro       VARCHAR(60),
+    fecha_ingreso       DATE,
+    antiguedad          VARCHAR(30),
+    direccion_ciudad    VARCHAR(20),
+    direccion_comuna    VARCHAR(30),
+    direccion_calle     VARCHAR(60),
+    direccion_numero    VARCHAR(40),
+    direccion_depto     VARCHAR(30),
+    es_pensionado       CHAR,
+    discapacidades      VARCHAR(30),
+    contrato_hasta      DATE,
+    tipo_contrato       VARCHAR(30),
+    motivo_egreso       VARCHAR(60),
+    tramo_asignacion    INT,
+    gerencia            VARCHAR(50),
+    jornada             VARCHAR(25),
+    horas_jornada       INT,
+    nombre_sucursal     VARCHAR(60),
+    tipo_categoria      VARCHAR(50),
+    tipo_gasto          VARCHAR(20),
+    vcto_plazo_fijo     VARCHAR(30),
+    vigencia_pacto      VARCHAR(20)
 );
 
 -- Creación de vista resultados_diarios
