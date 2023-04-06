@@ -4,9 +4,12 @@ import psycopg2
 import psycopg2.extras as extras
 from datetime import date
 
+CONTRATOS_FILENAME = 'contratos_2023-04-06.json'
+
 DEFAULT_QUERY = "INSERT INTO %s(%s) VALUES %%s"
 UPSERT_QUERY = ("INSERT INTO %s(%s) VALUES %%s "
-                "ON CONFLICT (%s) DO UPDATE")
+                "ON CONFLICT (%s) DO UPDATE "
+                "SET ")
 RAZONES_SOCIALES = {
     9415    : 'CIC RETAIL SPA',
     9414    : 'COMPAÑIAS CIC S.A.',
@@ -30,27 +33,6 @@ def nan_to_null(f,
     return _null
 
 psycopg2.extensions.register_adapter(float, nan_to_null)
-
-def insert_dataframe(dataframe, table_name=None):
-    if not table_name:
-        return 1
-    tuples = [tuple(row) for row in dataframe.to_numpy()]
-    columns = ','.join(list(dataframe.columns))
-
-    # SQL query to execute
-    insertion_query = DEFAULT_QUERY % (table_name, columns)
-    cursor = CONN.cursor()
-    try:
-        extras.execute_values(cursor, insertion_query, tuples)
-        CONN.commit()
-    except (Exception, psycopg2.DatabaseError) as error:
-        print(f"Error: {error}")
-        CONN.rollback()
-        cursor.close()
-        return 1
-    print(f"-> Dataframe has been inserted correctly into table {table_name}")
-    cursor.close()
-    return 0
 
 def update_personas(dataframe):
     personas_dict = {
@@ -148,7 +130,7 @@ for index, row in paises.iterrows():
     gentilicio = row['gentilicio']
     nacionalidades[codigo] = gentilicio
 
-contratos = pd.read_json('contratos_2023-03-30.json')[[
+contratos = pd.read_json(CONTRATOS_FILENAME)[[
     'id',
     'idContrato',
     'empleadoDetails',
@@ -207,7 +189,30 @@ data = {
     'vigencia_pacto'    : []
 }
 
-problematic_indexes = []
+for key in list(data.keys())[1:]:
+    UPSERT_QUERY += f"{key}=EXCLUDED.{key}, "
+UPSERT_QUERY = UPSERT_QUERY[:-2]
+
+def insert_dataframe(dataframe, table_name=None):
+    if not table_name:
+        return 1
+    tuples = [tuple(row) for row in dataframe.to_numpy()]
+    columns = ','.join(list(dataframe.columns))
+
+    # SQL query to execute
+    insertion_query = UPSERT_QUERY % (table_name, columns, 'id')
+    cursor = CONN.cursor()
+    try:
+        extras.execute_values(cursor, insertion_query, tuples)
+        CONN.commit()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error: {error}")
+        CONN.rollback()
+        cursor.close()
+        return 1
+    print(f"-> Dataframe has been inserted correctly into table {table_name}")
+    cursor.close()
+    return 0
 
 for index, row in contratos.iterrows():
     if (pd.isnull(row.id)
@@ -246,13 +251,15 @@ for index, row in contratos.iterrows():
     motivo_egreso_dict = row['motivoEgreso']
     fil = row['fechaContratacion'].split('-')
     fecha_ingreso = date(year=int(fil[0]), month=int(fil[1]), day=int(fil[2]))
-    if pd.isnull(motivo_egreso_dict):
+    if pd.isnull(motivo_egreso_dict) or pd.isnull(row['hasta']):
         motivo_egreso = np.nan
         fecha_final = TODAY
     else:
         motivo_egreso = motivo_egreso_dict['nombre']
         ffl = row['hasta'].split('-')
         fecha_final = date(year=int(ffl[0]), month=int(ffl[1]), day=int(ffl[2]))
+        if fecha_final >= TODAY:
+            fecha_final = TODAY
     data['antiguedad'].append(calcular_antiguedad(fecha_ingreso, fecha_final))
 
     detalles = row['empleadoDetails']['detalles'][0]
