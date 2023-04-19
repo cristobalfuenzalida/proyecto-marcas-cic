@@ -550,17 +550,28 @@ def fill_results_dataframe(dataframe, execution_mode='print'):
         't_asistido'        : [],
         't_atraso'          : [],
         't_anticipo'        : [],
-        't_permiso_cg'      : []
+        't_permiso_cg'      : [],
+        't_permiso_sg'      : []
     }
 
     for index, row in dataframe.iterrows():
         t_permiso_cg = tiempo_permiso_con_goce(
                 row.entrada_turno, row.salida_turno, row.salida_real,
                 row.colacion, row.permiso, row.detalle_permiso)
+        t_permiso_sg = time(0)
         if t_permiso_cg > time(0):
             t_anticipo = time(0)
         else:
             t_anticipo = time(hours=row.horas_anticipo)
+
+        entrada_turno = str(row.entrada_turno)
+        salida_turno = str(row.salida_turno)
+
+        if ((entrada_turno=='07:00:00' and salida_turno=='17:45:00')
+              or (entrada_turno=='21:15:00' and salida_turno=='07:00:00')):
+            t_anticipo = time(0)
+            t_permiso_sg = time(hours=row.horas_anticipo)
+
         tiempos = {
             't_asignado'    : tiempo_asignado(
                 row.entrada_turno, row.salida_turno, row.colacion),
@@ -572,6 +583,7 @@ def fill_results_dataframe(dataframe, execution_mode='print'):
             't_atraso'      : time(hours=row.horas_atraso),
             't_anticipo'    : t_anticipo,
             't_permiso_cg'  : t_permiso_cg,
+            't_permiso_sg'  : t_permiso_sg
         }
         if execution_mode == 'print':
             daily_results['persona_id'].append(row['rut'])

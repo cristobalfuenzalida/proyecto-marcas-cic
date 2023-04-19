@@ -140,10 +140,10 @@ CREATE TABLE contratos (
 -- Creación de vista resultados_diarios
 CREATE OR REPLACE VIEW resultados_diarios (
     id, rut, fecha, sucursal, centro_costo, t_asignado, t_asistido,
-    t_atraso, t_anticipo, t_vacaciones, t_licencia, t_ausencia, t_permiso_cg
+    t_atraso, t_anticipo, t_vacaciones, t_licencia, t_permiso_sg, t_permiso_cg
 ) AS
 --! ---------------------------------------------------------------------------
-WITH    tiempos_permisos (id, t_vacaciones, t_licencia, t_ausencia) AS (
+WITH    tiempos_permisos (id, t_vacaciones, t_licencia, t_permiso_sg) AS (
     SELECT  mt.id,
         CASE
             WHEN    p.tipo  = 'dia_vacaciones'
@@ -159,14 +159,14 @@ WITH    tiempos_permisos (id, t_vacaciones, t_licencia, t_ausencia) AS (
             WHEN    p.tipo  IN ('permiso_sin_goce', 'falta_injustificada')
             THEN    mt.t_asignado
             ELSE    0
-        END AS  t_ausencia
+        END AS  t_permiso_sg
     FROM        marcas_turnos       AS mt
     LEFT JOIN   permisos            AS p
     ON          mt.permiso_id       = p.id)
 -----------------------------------------------------------------------
 SELECT  mt.id, pers.rut, mt.fecha, suc.sucursal, cdc.centro,
         mt.t_asignado, mt.t_asistido, mt.t_atraso, mt.t_anticipo,
-        tp.t_vacaciones, tp.t_licencia, tp.t_ausencia, mt.t_permiso_cg
+        tp.t_vacaciones, tp.t_licencia, tp.t_permiso_sg, mt.t_permiso_cg
 FROM        marcas_turnos       AS mt
 LEFT JOIN   personas            AS pers
 ON          mt.persona_id   = pers.id
