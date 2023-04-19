@@ -47,8 +47,8 @@ XPATHS = {
                            '/div/div/div[2]/form/div[2]/div[1]/div/input'),
     'razon_social_list' : ('/html/body/section[2]/section/div[2]/div[1]'
                            '/div/div/div[2]/form/div[3]/div[1]/div/a/span[2]'),
-    RAZONES_SOCIALES[0] : '/html/body/div[21]/ul/li[2]',
-    RAZONES_SOCIALES[1] : '/html/body/div[23]/ul/li[3]',
+    RAZONES_SOCIALES[0] : '/html/body/div[20]/ul/li[2]',
+    RAZONES_SOCIALES[1] : '/html/body/div[22]/ul/li[3]',
     'download_button'   : ('/html/body/section[2]/section/div[2]/div[1]'
                            '/div/div/div[3]/button[3]'),
     'down_percentage'   : ('/html/body/section[2]/section/div[2]/div[10]'
@@ -164,6 +164,10 @@ for razon_social in RAZONES_SOCIALES:
             break
         print(f'File download in progress   : {percentage}%')
         sleep(10)
+        #! timeout in case process doesnt finish before next one (3 hours)
+        total_seconds = int(time() - start)
+        if total_seconds >= 10800:
+            break
         # user_input = timeout_input(5, "To cancel download, press X : ", '')
         # print()
         # if user_input.upper() == 'X':
