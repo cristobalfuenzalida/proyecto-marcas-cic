@@ -7,7 +7,7 @@ import os
 TZ_ADJUST = datetime.timedelta(seconds=-14400)
 inicio_ejecucion = datetime.datetime.now() + TZ_ADJUST
 
-# import scraper_bot
+import scraper_bot
 import aux_functions as af
 import database_filler_functions as dff
 
