@@ -132,8 +132,16 @@ def tiempo_efectivo(
     return t_asignado - (t_atraso + t_anticipo + t_permiso_cg)
 
 def tiempo_permiso_con_goce(
-        entrada_turno, salida_turno, salida_real=np.nan,
+        entrada_turno, salida_turno, salida_real=np.nan, horas_anticipo=np.nan,
         colacion=np.nan, permiso=np.nan, detalle_permiso=np.nan):
+    e_turno_str = str(entrada_turno)
+    s_turno_str = str(salida_turno)
+
+    if ((e_turno_str=='07:00:00' and s_turno_str=='17:45:00')
+            or (e_turno_str=='21:15:00' and s_turno_str=='07:00:00')):
+        if pd.notnull(horas_anticipo) and horas_anticipo > 0:
+            return time(hours=horas_anticipo)
+
     if permiso not in ['permiso_con_goce', 'dia_administrativo']:
         return time(0)
 
@@ -161,16 +169,8 @@ def tiempo_permiso_con_goce(
         return time(0)
 
 def tiempo_permiso_sin_goce(
-        entrada_turno, salida_turno, salida_real=np.nan, horas_anticipo=np.nan,
+        entrada_turno, salida_turno, salida_real=np.nan,
         colacion=np.nan, permiso=np.nan, detalle_permiso=np.nan):
-    e_turno_str = str(entrada_turno)
-    s_turno_str = str(salida_turno)
-
-    if ((e_turno_str=='07:00:00' and s_turno_str=='17:45:00')
-            or (e_turno_str=='21:15:00' and s_turno_str=='07:00:00')):
-        if pd.notnull(horas_anticipo) and horas_anticipo > 0:
-            return time(hours=horas_anticipo)
-
     if permiso not in ['permiso_sin_goce', 'falta_injustificada']:
         return time(0)
 
@@ -594,6 +594,7 @@ def fill_results_dataframe(dataframe, execution_mode='print'):
     for index, row in dataframe.iterrows():
         t_permiso_cg = tiempo_permiso_con_goce(
                 row.entrada_turno, row.salida_turno, row.salida_real,
+                row.horas_anticipo,
                 row.colacion, row.permiso, row.detalle_permiso)
         t_anticipo = time(hours=row.horas_anticipo)
         if t_permiso_cg > time(0):
@@ -601,7 +602,6 @@ def fill_results_dataframe(dataframe, execution_mode='print'):
 
         t_permiso_sg = tiempo_permiso_sin_goce(
             row.entrada_turno, row.salida_turno, row.salida_real,
-            row.horas_anticipo,
             row.colacion, row.permiso, row.detalle_permiso)
 
         tiempos = {
