@@ -168,7 +168,7 @@ def tiempo_permiso_sin_goce(
 
     if ((e_turno_str=='07:00:00' and s_turno_str=='17:45:00')
             or (e_turno_str=='21:15:00' and s_turno_str=='07:00:00')):
-        if pd.notnull(horas_anticipo):
+        if pd.notnull(horas_anticipo) and horas_anticipo > 0:
             return time(hours=horas_anticipo)
 
     if permiso not in ['permiso_sin_goce', 'falta_injustificada']:
@@ -595,23 +595,14 @@ def fill_results_dataframe(dataframe, execution_mode='print'):
         t_permiso_cg = tiempo_permiso_con_goce(
                 row.entrada_turno, row.salida_turno, row.salida_real,
                 row.colacion, row.permiso, row.detalle_permiso)
+        t_anticipo = time(hours=row.horas_anticipo)
         if t_permiso_cg > time(0):
             t_anticipo = time(0)
-        else:
-            t_anticipo = time(hours=row.horas_anticipo)
 
-        e_turno_str = str(row.entrada_turno)
-        s_turno_str = str(row.salida_turno)
-
-        if ((e_turno_str=='07:00:00' and s_turno_str=='17:45:00')
-                or (e_turno_str=='21:15:00' and s_turno_str=='07:00:00')):
-            t_anticipo = time(0)
-            t_permiso_sg = time(hours=row.horas_anticipo)
-        else:
-            t_permiso_sg = tiempo_permiso_sin_goce(
-                row.entrada_turno, row.salida_turno, row.salida_real,
-                row.horas_anticipo,
-                row.colacion, row.permiso, row.detalle_permiso)
+        t_permiso_sg = tiempo_permiso_sin_goce(
+            row.entrada_turno, row.salida_turno, row.salida_real,
+            row.horas_anticipo,
+            row.colacion, row.permiso, row.detalle_permiso)
 
         tiempos = {
             't_asignado'    : tiempo_asignado(
