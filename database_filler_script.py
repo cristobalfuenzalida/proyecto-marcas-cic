@@ -4,10 +4,10 @@ import numpy as np
 import sys
 import os
 
-TZ_ADJUST = datetime.timedelta(seconds=-10800)
+TZ_ADJUST = datetime.timedelta(seconds=-14400)
 inicio_ejecucion = datetime.datetime.now() + TZ_ADJUST
 
-import scraper_bot
+# import scraper_bot
 import aux_functions as af
 import database_filler_functions as dff
 
@@ -28,6 +28,7 @@ for razon_social in af.RAZONES_SOCIALES:
     dataframes[razon_social] = pd.read_excel(filename)[[
             'Rut', 'Nombre', 'Sucursal', 'Centro de costo', 'Fecha',
             'Entrada real', 'Salida real', 'Entrada turno', 'Salida turno',
+            'Horas asign.', 'Horas asis.',
             'Llegada tardia. corr.', 'Salida temp. corr.', 'Turno',
             'Permiso', 'Detalle permisos'
         ]].rename(columns={
@@ -40,6 +41,8 @@ for razon_social in af.RAZONES_SOCIALES:
             'Salida real'           : 'salida_real',
             'Entrada turno'         : 'entrada_turno',
             'Salida turno'          : 'salida_turno',
+            'Horas asign.'          : 't_asignado',
+            'Horas asis.'           : 't_asistido',
             'Llegada tardia. corr.' : 'horas_atraso',
             'Salida temp. corr.'    : 'horas_anticipo',
             'Turno'                 : 'turno',

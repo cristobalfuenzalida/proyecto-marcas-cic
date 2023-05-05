@@ -8,8 +8,7 @@ from selenium.webdriver.common.by import By
 from datetime import date, timedelta
 from datetime import time as dtime
 from time import sleep, time
-from aux_functions import timeout_input, RAZONES_SOCIALES
-import sys
+from aux_functions import RAZONES_SOCIALES
 import os
 
 DEFAULT_FILE_NAME = 'ReporteAvanzado.xlsx'

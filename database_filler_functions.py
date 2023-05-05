@@ -160,6 +160,43 @@ def tiempo_permiso_con_goce(
     else:
         return time(0)
 
+def tiempo_permiso_sin_goce(
+        entrada_turno, salida_turno, salida_real=np.nan, horas_anticipo=np.nan,
+        colacion=np.nan, permiso=np.nan, detalle_permiso=np.nan):
+    e_turno_str = str(entrada_turno)
+    s_turno_str = str(salida_turno)
+
+    if ((e_turno_str=='07:00:00' and s_turno_str=='17:45:00')
+            or (e_turno_str=='21:15:00' and s_turno_str=='07:00:00')):
+        if pd.notnull(horas_anticipo):
+            return time(hours=horas_anticipo)
+
+    if permiso not in ['permiso_sin_goce', 'falta_injustificada']:
+        return time(0)
+
+    elif detalle_permiso == DIA_COMPLETO:
+        return tiempo_asignado(entrada_turno, salida_turno, colacion)
+
+    elif pd.notnull(detalle_permiso) and (' hrs' in detalle_permiso):
+        hh_mm = detalle_permiso[:detalle_permiso.index(' hrs')].split(':')
+        return time(hours=int(hh_mm[0]), minutes=int(hh_mm[1]))
+
+    elif pd.notnull(salida_turno) and pd.notnull(salida_real):
+        # Se calcula resultado con tiempos redondeados al minuto
+        tiempo_salida_turno = hora_to_timedelta(salida_turno)
+        tiempo_salida_real = hora_to_timedelta(salida_real)
+
+        tiempo_salida_real = time(
+            seconds=60*round(tiempo_salida_real.seconds/60)
+        )
+        tiempo_salida_turno = time(
+            seconds=60*round(tiempo_salida_turno.seconds/60)
+        )
+        return (tiempo_salida_turno - tiempo_salida_real)
+
+    else:
+        return time(0)
+
 def insert_dataframe(dataframe, table_name=None):
     if not table_name:
         return 1
@@ -526,7 +563,7 @@ def fill_marks_table(dataframe, table_name=None, execution_mode='print'):
         'razon_social', 'sucursal_id', 'centro_id',
         'entrada_real', 'salida_real', 'turno_id',
         't_asignado', 't_asistido', 't_atraso', 't_anticipo',
-        't_permiso_cg', 'permiso_id', 'detalle_permiso'
+        't_permiso_cg', 't_permiso_sg', 'permiso_id', 'detalle_permiso'
     ]]
 
     option = 'y'
@@ -558,19 +595,23 @@ def fill_results_dataframe(dataframe, execution_mode='print'):
         t_permiso_cg = tiempo_permiso_con_goce(
                 row.entrada_turno, row.salida_turno, row.salida_real,
                 row.colacion, row.permiso, row.detalle_permiso)
-        t_permiso_sg = time(0)
         if t_permiso_cg > time(0):
             t_anticipo = time(0)
         else:
             t_anticipo = time(hours=row.horas_anticipo)
 
-        entrada_turno = str(row.entrada_turno)
-        salida_turno = str(row.salida_turno)
+        e_turno_str = str(row.entrada_turno)
+        s_turno_str = str(row.salida_turno)
 
-        if ((entrada_turno=='07:00:00' and salida_turno=='17:45:00')
-              or (entrada_turno=='21:15:00' and salida_turno=='07:00:00')):
+        if ((e_turno_str=='07:00:00' and s_turno_str=='17:45:00')
+                or (e_turno_str=='21:15:00' and s_turno_str=='07:00:00')):
             t_anticipo = time(0)
             t_permiso_sg = time(hours=row.horas_anticipo)
+        else:
+            t_permiso_sg = tiempo_permiso_sin_goce(
+                row.entrada_turno, row.salida_turno, row.salida_real,
+                row.horas_anticipo,
+                row.colacion, row.permiso, row.detalle_permiso)
 
         tiempos = {
             't_asignado'    : tiempo_asignado(

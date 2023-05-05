@@ -95,9 +95,12 @@ CREATE TABLE marcas_turnos (
     t_atraso        REAL,
     t_anticipo      REAL,
     t_permiso_cg    REAL,
+    t_permiso_sg    REAL,
     permiso_id      INT         REFERENCES permisos(id),
     detalle_permiso VARCHAR(40)
 );
+
+-- ALTER TABLE marcas_turnos ADD COLUMN t_permiso_sg REAL;
 
 -- Creación de tabla contratos con datos de API Talana
 CREATE TABLE contratos (
@@ -143,7 +146,7 @@ CREATE OR REPLACE VIEW resultados_diarios (
     t_atraso, t_anticipo, t_vacaciones, t_licencia, t_permiso_sg, t_permiso_cg
 ) AS
 --! ---------------------------------------------------------------------------
-WITH    tiempos_permisos (id, t_vacaciones, t_licencia, t_permiso_sg) AS (
+WITH    tiempos_permisos (id, t_vacaciones, t_licencia) AS (
     SELECT  mt.id,
         CASE
             WHEN    p.tipo  = 'dia_vacaciones'
@@ -154,19 +157,14 @@ WITH    tiempos_permisos (id, t_vacaciones, t_licencia, t_permiso_sg) AS (
             WHEN    p.tipo  IN ('licencia_medica', 'licencia_maternal')
             THEN    mt.t_asignado
             ELSE    0
-        END AS  t_licencia,
-        CASE
-            WHEN    p.tipo  IN ('permiso_sin_goce', 'falta_injustificada')
-            THEN    mt.t_asignado
-            ELSE    0
-        END AS  t_permiso_sg
+        END AS  t_licencia
     FROM        marcas_turnos       AS mt
     LEFT JOIN   permisos            AS p
     ON          mt.permiso_id       = p.id)
 -----------------------------------------------------------------------
 SELECT  mt.id, pers.rut, mt.fecha, suc.sucursal, cdc.centro,
         mt.t_asignado, mt.t_asistido, mt.t_atraso, mt.t_anticipo,
-        tp.t_vacaciones, tp.t_licencia, tp.t_permiso_sg, mt.t_permiso_cg
+        tp.t_vacaciones, tp.t_licencia, mt.t_permiso_sg, mt.t_permiso_cg
 FROM        marcas_turnos       AS mt
 LEFT JOIN   personas            AS pers
 ON          mt.persona_id   = pers.id
