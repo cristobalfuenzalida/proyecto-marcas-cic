@@ -156,7 +156,8 @@ def tiempo_permiso_con_goce(
     s_turno_str = str(salida_turno)
 
     if ((e_turno_str=='07:00:00' and s_turno_str=='17:45:00')
-            or (e_turno_str=='21:15:00' and s_turno_str=='07:00:00')):
+            or (e_turno_str=='21:15:00' and s_turno_str=='07:00:00')
+            or (e_turno_str=='07:00:00' and s_turno_str=='12:00:00')):
         if detalle_permiso == DIA_COMPLETO:
             return tiempo_asignado(entrada_turno, salida_turno, colacion)
         else:
