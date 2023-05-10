@@ -59,7 +59,6 @@ def tiempo_asignado(entrada_turno, salida_turno, colacion):
     
     return time(seconds=60*round(t_asignado.seconds/60))
 
-'''
 def tiempo_entrada_atrasada(entrada_turno, entrada_real, detalle_permiso):
     if (pd.isnull(entrada_turno) or pd.isnull(entrada_real)
             or detalle_permiso == DIA_COMPLETO):
@@ -78,7 +77,11 @@ def tiempo_entrada_atrasada(entrada_turno, entrada_real, detalle_permiso):
         tiempo_entrada_real = time(
             seconds=60*round(tiempo_entrada_real.seconds/60)
         )
-        return (tiempo_entrada_real - tiempo_entrada_turno)
+        if (tiempo_entrada_turno <= time(hours=10)
+                and tiempo_entrada_real >= time(hours=20)):
+            return time(0)
+        else:
+            return (tiempo_entrada_real - tiempo_entrada_turno)
 
 def tiempo_salida_anticipada(salida_turno, salida_real, detalle_permiso):
     if (pd.isnull(salida_turno) or pd.isnull(salida_real)
@@ -98,13 +101,15 @@ def tiempo_salida_anticipada(salida_turno, salida_real, detalle_permiso):
         tiempo_salida_real = time(
             seconds=60*round(tiempo_salida_real.seconds/60)
         )
-        return (tiempo_salida_turno - tiempo_salida_real)
-
-'''
+        if (tiempo_salida_turno >= time(hours=20)
+                and tiempo_salida_real <= time(hours=10)):
+            return time(0)
+        else:
+            return (tiempo_salida_turno - tiempo_salida_real)
 
 def tiempo_efectivo(
         entrada_turno, salida_turno, entrada_real=np.nan, salida_real=np.nan,
-        horas_atraso=np.nan, horas_anticipo=np.nan, colacion=np.nan,
+        t_atraso=time(0), t_anticipo=time(0), colacion=np.nan,
         permiso=np.nan, detalle_permiso=np.nan):
     if ((pd.isnull(entrada_real) or pd.isnull(salida_real))
             or detalle_permiso == DIA_COMPLETO
@@ -120,32 +125,47 @@ def tiempo_efectivo(
             return abs(tiempo_salida - tiempo_entrada)
 
     t_asignado = tiempo_asignado(entrada_turno, salida_turno, colacion)
-    t_atraso = time(hours=horas_atraso)
     t_permiso_cg = tiempo_permiso_con_goce(
+        entrada_turno, salida_turno, salida_real, t_anticipo,
+        colacion, permiso, detalle_permiso)
+    t_permiso_sg = tiempo_permiso_sin_goce(
         entrada_turno, salida_turno, salida_real,
-        colacion, permiso, detalle_permiso
-    )
+        colacion, permiso, detalle_permiso)
+
     if t_permiso_cg > time(0):
-        t_anticipo = time(0)
+        if t_permiso_cg <= t_anticipo:
+            t_anticipo = t_anticipo - t_permiso_cg
+        else:
+            t_anticipo = time(0)
+    if t_permiso_sg > time(0):
+        if t_permiso_sg <= t_anticipo:
+            t_anticipo = t_anticipo - t_permiso_sg
+        else:
+            t_anticipo = time(0)
+
+    t_total = t_asignado - (t_atraso + t_anticipo + t_permiso_cg + t_permiso_sg)
+    if t_total > time(0):
+        return t_total
     else:
-        t_anticipo = time(hours=horas_anticipo)
-    return t_asignado - (t_atraso + t_anticipo + t_permiso_cg)
+        return time(0)
 
 def tiempo_permiso_con_goce(
-        entrada_turno, salida_turno, salida_real=np.nan, horas_anticipo=np.nan,
+        entrada_turno, salida_turno, salida_real=np.nan, t_anticipo=time(0),
         colacion=np.nan, permiso=np.nan, detalle_permiso=np.nan):
     e_turno_str = str(entrada_turno)
     s_turno_str = str(salida_turno)
 
     if ((e_turno_str=='07:00:00' and s_turno_str=='17:45:00')
             or (e_turno_str=='21:15:00' and s_turno_str=='07:00:00')):
-        if pd.notnull(horas_anticipo) and horas_anticipo > 0:
-            return time(hours=horas_anticipo)
+        if detalle_permiso == DIA_COMPLETO:
+            return tiempo_asignado(entrada_turno, salida_turno, colacion)
+        else:
+            return t_anticipo
 
     if permiso not in ['permiso_con_goce', 'dia_administrativo']:
         return time(0)
 
-    elif detalle_permiso == DIA_COMPLETO:
+    elif detalle_permiso == DIA_COMPLETO or permiso in PERMISOS_DIARIOS:
         return tiempo_asignado(entrada_turno, salida_turno, colacion)
 
     elif pd.notnull(detalle_permiso) and (' hrs' in detalle_permiso):
@@ -171,10 +191,12 @@ def tiempo_permiso_con_goce(
 def tiempo_permiso_sin_goce(
         entrada_turno, salida_turno, salida_real=np.nan,
         colacion=np.nan, permiso=np.nan, detalle_permiso=np.nan):
+    if pd.isnull(permiso) and detalle_permiso == 'Día completo':
+        return tiempo_asignado(entrada_turno, salida_turno, colacion)
     if permiso not in ['permiso_sin_goce', 'falta_injustificada']:
         return time(0)
 
-    elif detalle_permiso == DIA_COMPLETO:
+    elif detalle_permiso == DIA_COMPLETO or permiso in PERMISOS_DIARIOS:
         return tiempo_asignado(entrada_turno, salida_turno, colacion)
 
     elif pd.notnull(detalle_permiso) and (' hrs' in detalle_permiso):
@@ -531,8 +553,6 @@ def fill_marks_table(dataframe, table_name=None, execution_mode='print'):
         'salida_real'       : [],
         'entrada_turno'     : [],
         'salida_turno'      : [],
-        'horas_atraso'      : [],
-        'horas_anticipo'    : [],
         'colacion'          : [],
         'turno_id'          : [],
         'permiso_id'        : [],
@@ -592,27 +612,65 @@ def fill_results_dataframe(dataframe, execution_mode='print'):
     }
 
     for index, row in dataframe.iterrows():
+        t_atraso = tiempo_entrada_atrasada(
+            row.entrada_turno, row.entrada_real, row.detalle_permiso)
+        t_anticipo = tiempo_salida_anticipada(
+            row.salida_turno, row.salida_real, row.detalle_permiso)
+        t_asignado = tiempo_asignado(
+                row.entrada_turno, row.salida_turno, row.colacion)
+        t_asistido = tiempo_efectivo(
+                row.entrada_turno, row.salida_turno,
+                row.entrada_real, row.salida_real,
+                t_atraso, t_anticipo,
+                row.colacion, row.permiso, row.detalle_permiso)
         t_permiso_cg = tiempo_permiso_con_goce(
                 row.entrada_turno, row.salida_turno, row.salida_real,
-                row.horas_anticipo,
-                row.colacion, row.permiso, row.detalle_permiso)
-        t_anticipo = time(hours=row.horas_anticipo)
-        if t_permiso_cg > time(0):
-            t_anticipo = time(0)
-
+                t_anticipo, row.colacion, row.permiso, row.detalle_permiso)
         t_permiso_sg = tiempo_permiso_sin_goce(
             row.entrada_turno, row.salida_turno, row.salida_real,
             row.colacion, row.permiso, row.detalle_permiso)
+        
+        if t_atraso > t_asignado:
+            t_atraso = t_asignado
+        if t_anticipo > t_asignado:
+            t_anticipo = t_asignado
+
+        if t_permiso_cg > time(0):
+            if t_permiso_cg <= t_anticipo:
+                t_anticipo = t_anticipo - t_permiso_cg
+            else:
+                t_anticipo = time(0)
+        if t_permiso_sg > time(0):
+            if t_permiso_sg <= t_anticipo:
+                t_anticipo = t_anticipo - t_permiso_sg
+            else:
+                t_anticipo = time(0)
+        
+        suma_parcial = (
+            t_asistido + t_atraso + t_anticipo + t_permiso_cg + t_permiso_sg)
+
+        if (suma_parcial < (t_asignado - time(minutes=3))
+                and row.permiso not in PERMISOS_DIARIOS
+                and row.detalle_permiso != 'Día completo'):
+            t_permiso_sg = t_asignado - suma_parcial
+        if suma_parcial > (t_asignado + time(minutes=3)):
+            diferencia = (suma_parcial - t_asignado)
+            if diferencia <= t_permiso_sg:
+                t_permiso_sg = t_permiso_sg - diferencia
+            else:
+                t_permiso_sg = time(0)
+
+        if row.permiso in ['licencia_medica', 'licencia_maternal',
+                           'dia_vacaciones']:
+            t_atraso = time(0)
+            t_anticipo = time(0)
+            t_permiso_cg = time(0)
+            t_permiso_sg = time(0)
 
         tiempos = {
-            't_asignado'    : tiempo_asignado(
-                row.entrada_turno, row.salida_turno, row.colacion),
-            't_asistido'    : tiempo_efectivo(
-                row.entrada_turno, row.salida_turno,
-                row.entrada_real, row.salida_real,
-                row.horas_atraso, row.horas_anticipo,
-                row.colacion, row.permiso, row.detalle_permiso),
-            't_atraso'      : time(hours=row.horas_atraso),
+            't_asignado'    : t_asignado,
+            't_asistido'    : t_asistido,
+            't_atraso'      : t_atraso,
             't_anticipo'    : t_anticipo,
             't_permiso_cg'  : t_permiso_cg,
             't_permiso_sg'  : t_permiso_sg

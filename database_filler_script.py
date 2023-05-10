@@ -28,9 +28,7 @@ for razon_social in af.RAZONES_SOCIALES:
     dataframes[razon_social] = pd.read_excel(filename)[[
             'Rut', 'Nombre', 'Sucursal', 'Centro de costo', 'Fecha',
             'Entrada real', 'Salida real', 'Entrada turno', 'Salida turno',
-            'Horas asign.', 'Horas asis.',
-            'Llegada tardia. corr.', 'Salida temp. corr.', 'Turno',
-            'Permiso', 'Detalle permisos'
+            'Turno', 'Permiso', 'Detalle permisos'
         ]].rename(columns={
             'Rut'                   : 'rut',
             'Nombre'                : 'nombre',
@@ -41,10 +39,6 @@ for razon_social in af.RAZONES_SOCIALES:
             'Salida real'           : 'salida_real',
             'Entrada turno'         : 'entrada_turno',
             'Salida turno'          : 'salida_turno',
-            'Horas asign.'          : 't_asignado',
-            'Horas asis.'           : 't_asistido',
-            'Llegada tardia. corr.' : 'horas_atraso',
-            'Salida temp. corr.'    : 'horas_anticipo',
             'Turno'                 : 'turno',
             'Permiso'               : 'permiso',
             'Detalle permisos'      : 'detalle_permiso'
@@ -53,8 +47,7 @@ for razon_social in af.RAZONES_SOCIALES:
 DATA = pd.concat(list(dataframes.values()))[[
     'rut', 'nombre', 'fecha', 'razon_social', 'sucursal', 'centro',
     'entrada_real', 'salida_real', 'entrada_turno', 'salida_turno',
-    'horas_atraso', 'horas_anticipo', 'turno', 'colacion',
-    'permiso', 'detalle_permiso'
+    'turno', 'colacion', 'permiso', 'detalle_permiso'
 ]]
 
 DATA.sort_values(by=['fecha', 'entrada_real'], inplace=True)

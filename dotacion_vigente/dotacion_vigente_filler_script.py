@@ -4,7 +4,7 @@ import psycopg2
 import psycopg2.extras as extras
 from datetime import date
 
-CONTRATOS_FILENAME = 'contratos_2023-05-05.json'
+CONTRATOS_FILENAME = 'contratos_2023-05-10.json'
 
 DEFAULT_QUERY = "INSERT INTO %s(%s) VALUES %%s"
 UPSERT_QUERY = ("INSERT INTO %s(%s) VALUES %%s "
